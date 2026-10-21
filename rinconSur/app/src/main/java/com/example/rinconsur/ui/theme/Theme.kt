@@ -1,5 +1,4 @@
 package com.example.rinconsur.ui.theme
-
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
