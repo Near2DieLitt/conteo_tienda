@@ -1,3 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+
 <resources>
     <string name="app_name">rinconSur</string>
+
+    <!-- PANTALLA 1: FORMULARIO-->
+    <string name="mini_titulo">Rincón Sur</string>
+    <string name="titulo_formulario">Iniciar Sesión</string>
+    <string name="subtitulo_formulario">Acceso para personal autorizado</string>
+    <string name="campo_correo">Correo Electronico</string>
+    <string name="campo_contrasena">Ingresa tu contraseña</string>
+    <string name="campo_olvide_contrasena">¿Olvidaste tu contraseña?</string>
+    <string name="btn_ingresar">Rincón Sur</string>
+
+    <!-- PANTALLA 2: PERFIL -->
+    <string name="titulo_perfil">Mi perfil</string>
+    <string name="campo_operacion">Operación</string>
+    <string name="subparte_equipo_compartido">Equipo compartido</string>
+    <string name="subparte_sesiones_compl">Sesiones completadas</string>
+    <string name="subparte_permisos">Permisos del perfil</string>
+    <string name="campo_preferencias">Preferencias</string>
+    <string name="subparte_datos_conexion">Datos sin conexión</string>
+    <string name="subparte_notificaciones">Notificaciones</string>
+    <string name="todo_sincronizado">Todo sincronizado</string>
+    <string name="btn_editar_perfil">Editar perfil</string>
+    <string name="btn_cerrar_sesion">Cerrar sesión</string>
+
+    <string name="saludo">Hola, %1$s</string>
+
+    <!-- Menu de abajo -->
+    <string name="menu_inicio">Inicio</string>
+    <string name="menu_sesiones">Sesiones</string>
+    <string name="menu_analitica">Analitica</string>
+    <string name="menu_perfil">perfil</string>
+
+    <!-- Descripciones para accesibilidad (talback) -->
+    
 </resources>
+
+
+
+
+
