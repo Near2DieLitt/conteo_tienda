@@ -7,8 +7,6 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import com.example.rinconsur.ui.theme.TipografiaRinconSur
-
 val RinconSurColorScheme = lightColorScheme(
     primary = Turquesa700,
     onPrimary = Superficie,
@@ -91,13 +89,17 @@ private val Formas = Shapes(
 )
 @Composable
 fun RinconSurTheme(
-
     darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit,
-    ) {
+    content: @Composable () -> Unit
+) {
     MaterialTheme(
-        colorScheme = if (darkTheme) darkColorScheme() else lightColorScheme(),
+        colorScheme = if (darkTheme) {
+            RinconSurDarkColorScheme
+        } else {
+            RinconSurColorScheme
+        },
         typography = TipografiaRinconSur,
-        content = content,
-        )
+        shapes = Formas,
+        content = content
+    )
 }
