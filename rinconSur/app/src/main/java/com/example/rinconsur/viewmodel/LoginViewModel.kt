@@ -22,17 +22,6 @@ class LoginViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    /*
- * Usuarios para la demostración.
- *
- * Observador:
- * observador@rinconsur.cl
- * Observador123
- *
- * Supervisor:
- * supervisor@rinconsur.cl
- * Supervisor123
- */
 
     private fun crearHash(password: String): String {
         return BCrypt.withDefaults()
@@ -74,7 +63,7 @@ class LoginViewModel : ViewModel() {
         _uiState.update {
             estado ->
             estado.copy(
-                password = nuevoCorreo,
+                correo = nuevoCorreo,
                 mensajeError = null
             )
         }
@@ -137,6 +126,11 @@ class LoginViewModel : ViewModel() {
             passwordIngresada = password,
             passwordHash = usuarioEncontrado.passwordHash
         )
+
+        if (!passwordCorrecta) {
+            mostrarError("Correo o contrseña incorrectos.")
+            return
+        }
 
         _uiState.update { estado ->
             estado.copy(

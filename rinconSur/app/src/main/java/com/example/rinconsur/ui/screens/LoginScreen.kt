@@ -58,39 +58,24 @@ import com.example.rinconsur.viewmodel.LoginViewModel
 fun LoginScreen(
     modoOscuro: Boolean,
     onCambiarTema: () -> Unit,
+    onOlvidoContrasena: () -> Unit,
     onIngresoObservador: () -> Unit,
     onIngresoSupervisor: () -> Unit,
     loginViewModel: LoginViewModel = viewModel()
 ) {
     val uiState by loginViewModel.uiState.collectAsStateWithLifecycle()
 
-    /*
-     * El contenido de los campos se guarda localmente para impedir
-     * que se borre durante una recomposición.
-     */
-    var correo by rememberSaveable {
-        mutableStateOf("")
-    }
+    var correo by rememberSaveable { mutableStateOf("") }
 
-    var contrasena by rememberSaveable {
-        mutableStateOf("")
-    }
+    var contrasena by rememberSaveable { mutableStateOf("") }
 
-    var contrasenaVisible by rememberSaveable {
-        mutableStateOf(false)
-    }
+    var contrasenaVisible by rememberSaveable { mutableStateOf(false) }
 
-    var errorCorreo by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
+    var errorCorreo by rememberSaveable { mutableStateOf<String?>(null) }
 
-    var errorContrasena by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
+    var errorContrasena by rememberSaveable { mutableStateOf<String?>(null) }
 
-    var errorGeneral by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
+    var errorGeneral by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(uiState.usuarioAutenticado) {
         val usuario = uiState.usuarioAutenticado
@@ -264,9 +249,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 TextButton(
-                    onClick = {
-                        // Navegación para recuperar contraseña.
-                    },
+                    onClick = onOlvidoContrasena,
                     modifier = Modifier.align(
                         Alignment.CenterEnd
                     )
@@ -274,8 +257,7 @@ fun LoginScreen(
                     Text(
                         text = "¿Olvidaste la contraseña?",
                         color = MaterialTheme.colorScheme.primary,
-                        style =
-                            MaterialTheme.typography.labelLarge
+                        style = MaterialTheme.typography.labelLarge
                     )
                 }
             }
@@ -318,10 +300,6 @@ fun LoginScreen(
                         errorCorreo == null &&
                         errorContrasena == null
                     ) {
-                        /*
-                         * Guardamos los valores definitivos antes
-                         * de solicitar la autenticación.
-                         */
                         loginViewModel.actualizarCorreo(
                             correoLimpio
                         )
