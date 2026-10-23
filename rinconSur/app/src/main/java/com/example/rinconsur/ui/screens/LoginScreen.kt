@@ -59,8 +59,8 @@ fun LoginScreen(
     modoOscuro: Boolean,
     onCambiarTema: () -> Unit,
     onOlvidoContrasena: () -> Unit,
-    onIngresoObservador: () -> Unit,
-    onIngresoSupervisor: () -> Unit,
+    onIngresoObservador: (String) -> Unit,
+    onIngresoSupervisor: (String) -> Unit,
     loginViewModel: LoginViewModel = viewModel()
 ) {
     val uiState by loginViewModel.uiState.collectAsStateWithLifecycle()
@@ -83,15 +83,23 @@ fun LoginScreen(
 
         when (usuario.rol) {
             RolUsuario.OBSERVADOR -> {
-                onIngresoObservador()
+                onIngresoObservador(usuario.correo)
             }
 
             RolUsuario.SUPERVISOR -> {
-                onIngresoSupervisor()
+                onIngresoSupervisor(usuario.correo)
             }
         }
 
         loginViewModel.navegacionRealizada()
+    }
+
+    LaunchedEffect(uiState.mensajeError) {
+        val error = uiState.mensajeError
+        if (error != null) {
+            errorCorreo = error
+            errorContrasena = error
+        }
     }
 
     Box(

@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.rinconsur.model.RolUsuario
 import com.example.rinconsur.ui.screens.LoginScreen
+import com.example.rinconsur.ui.screens.MenuPrincipalScreen
 import com.example.rinconsur.ui.screens.RecuperarContrasenaScreen
 
 @Composable
@@ -23,6 +24,9 @@ fun AppNavigation(
     val navController = rememberNavController()
     var rolActivo by rememberSaveable {
         mutableStateOf(RolUsuario.OBSERVADOR)
+    }
+    var correoLogueado by rememberSaveable {
+        mutableStateOf("observador@rinconsur.cl")
     }
 
     NavHost(
@@ -38,12 +42,14 @@ fun AppNavigation(
                         Rutas.RecuperarContrasena.ruta
                     )
                 },
-                onIngresoObservador = {
+                onIngresoObservador = { correo ->
+                    correoLogueado = correo
                     navController.navegarDesdeLogin(
                         destino = Rutas.MenuPrincipal.ruta
                     )
                 },
-                onIngresoSupervisor = {
+                onIngresoSupervisor = { correo ->
+                    correoLogueado = correo
                     navController.navegarDesdeLogin(
                         destino = Rutas.MenuPrincipal.ruta
                     )
@@ -62,7 +68,11 @@ fun AppNavigation(
         }
 
         composable(Rutas.MenuPrincipal.ruta) {
-
+            MenuPrincipalScreen(
+                correoUsuario = correoLogueado,
+                modoOscuro = modoOscuro,
+                onCambiarTema = onCambiarTema
+            )
         }
     }
 }
