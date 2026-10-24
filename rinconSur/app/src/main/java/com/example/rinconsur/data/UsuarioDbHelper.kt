@@ -65,7 +65,7 @@ class UsuarioDbHelper (context: Context):
         var usuario: Usuario? = null
 
         val cursor: Cursor = db.rawQuery(
-            "SELECT $USU_NOMBRE, $USU_CORREO, $USU_CONTRASENA, $USU_ROL FROM $TABLA_USUARIOS WHERE $USU_CORREO = ?",
+            "SELECT $USU_NOMBRE, $USU_CORREO, $USU_CONTRASENA, $USU_ROL, $USU_AVATAR FROM $TABLA_USUARIOS WHERE $USU_CORREO = ?",
             arrayOf(correo)
         )
 
@@ -87,6 +87,13 @@ class UsuarioDbHelper (context: Context):
 
         return usuario
 
+    }
+
+    fun actualizarAvatar(correo: String, avatar: ByteArray){
+        val valores = ContentValues().apply { put(USU_AVATAR, avatar) }
+        val db = this.writableDatabase
+        db.update(TABLA_USUARIOS, valores, "$USU_CORREO = ?", arrayOf(correo))
+        db.close()
     }
 
 

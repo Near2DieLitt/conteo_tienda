@@ -14,6 +14,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.rinconsur.model.RolUsuario
 import com.example.rinconsur.ui.screens.LoginScreen
 import com.example.rinconsur.ui.screens.MenuPrincipalScreen
+import com.example.rinconsur.ui.screens.PerfilScreen
 import com.example.rinconsur.ui.screens.RecuperarContrasenaScreen
 
 @Composable
@@ -71,9 +72,31 @@ fun AppNavigation(
             MenuPrincipalScreen(
                 correoUsuario = correoLogueado,
                 modoOscuro = modoOscuro,
-                onCambiarTema = onCambiarTema
+                onCambiarTema = onCambiarTema,
+                onNavegarPerfil = {
+                    navController.navigate(Rutas.Perfil.ruta)
+                }
             )
         }
+
+        composable(Rutas.Perfil.ruta) {
+            PerfilScreen(
+                correoUsuario = correoLogueado,
+                modoOscuro = modoOscuro,
+                onCambiarTema = onCambiarTema,
+                onCerrarSesion = {
+                    navController.navigate(Rutas.Login.ruta) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                // --- AGREGAS ESTA LÍNEA PARA VOLVER AL INICIO ---
+                onIrAInicio = {
+                    navController.navigate(Rutas.MenuPrincipal.ruta)
+                }
+            )
+        }
+
+
     }
 }
 

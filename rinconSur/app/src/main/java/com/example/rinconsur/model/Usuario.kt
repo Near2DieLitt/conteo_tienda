@@ -2,8 +2,10 @@ package com.example.rinconsur.model
 
 
 data class Usuario(
+    val id: Int = 0,
+    val nombre: String,
     val correo: String,
     val passwordHash: String,
-    val nombre: String,
-    val rol: RolUsuario
+    val rol: RolUsuario,
+    val avatar: ByteArray? = null
 )
