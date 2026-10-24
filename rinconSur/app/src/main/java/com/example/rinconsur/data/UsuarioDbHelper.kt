@@ -96,5 +96,21 @@ class UsuarioDbHelper (context: Context):
         db.close()
     }
 
+    fun verificarCorreoExistente(correo: String): Boolean{
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT 1 FROM $TABLA_USUARIOS WHERE $USU_CORREO = ?", arrayOf(correo))
+        val existe = cursor.moveToFirst()
+        cursor.close()
+        db.close()
+        return existe
+    }
+
+    fun actualizarContrasena(correo: String, nuevaContrasenaHash: String): Boolean{
+        val db = this.writableDatabase
+        val valores = ContentValues().apply { put(USU_CONTRASENA, nuevaContrasenaHash) }
+        val filasAfectadas = db.update(TABLA_USUARIOS, valores, "$USU_CORREO = ?", arrayOf(correo))
+        db.close()
+        return filasAfectadas > 0
+    }
 
 }

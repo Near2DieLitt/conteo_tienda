@@ -1,8 +1,11 @@
 package com.example.rinconsur.viewmodel
 
+import android.app.Application
 import android.util.Patterns
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import at.favre.lib.crypto.bcrypt.BCrypt
+import com.example.rinconsur.data.UsuarioDbHelper
 import com.example.rinconsur.model.RolUsuario
 import com.example.rinconsur.model.Usuario
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,18 +21,11 @@ data class LoginUiState(
     val usuarioAutenticado: Usuario? = null
 )
 
-class LoginViewModel : ViewModel() {
+class LoginViewModel(application: Application): AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-
-    private fun crearHash(password: String): String {
-        return BCrypt.withDefaults()
-            .hashToString(
-                12,
-                password.toCharArray()
-            )
-    }
+    private val dbHelper = UsuarioDbHelper(application)
 
     private fun verificarPassword(
         passwordIngresada: String,
@@ -41,23 +37,6 @@ class LoginViewModel : ViewModel() {
                 passwordHash
             )
             .verified
-    }
-    private val usuarios: List<Usuario> by lazy {
-        listOf(
-            Usuario(
-                nombre = "Observador rincón sur",
-                correo = "observador@rinconsur.cl",
-                passwordHash = crearHash("Observador123"),
-                rol = RolUsuario.OBSERVADOR
-            ),
-            Usuario(
-                nombre = "Supervisor rincón sur",
-                correo = "supervisor@rinconsur.cl",
-                passwordHash = crearHash("Supervisor123"),
-                rol = RolUsuario.SUPERVISOR
-            )
-
-        )
     }
     fun actualizarCorreo(nuevoCorreo: String) {
         _uiState.update {
@@ -109,18 +88,12 @@ class LoginViewModel : ViewModel() {
             return
         }
 
-        val usuarioEncontrado = usuarios.find { usuario ->
-            usuario.correo.equals(
-                other = correo,
-                ignoreCase = true
-            )
-        }
+        val usuarioEncontrado = dbHelper.obtenerUsuarioPorCorreo(correo)
 
-        if (usuarioEncontrado == null) {
-            mostrarError("Correo o contraseña incorrectos.")
+        if (usuarioEncontrado == null){
+            mostrarError("Correo o contraseña incorrectos")
             return
         }
-
 
         val passwordCorrecta = verificarPassword(
             passwordIngresada = password,
@@ -128,7 +101,7 @@ class LoginViewModel : ViewModel() {
         )
 
         if (!passwordCorrecta) {
-            mostrarError("Correo o contrseña incorrectos.")
+            mostrarError("Correo o contraseña incorrectos.")
             return
         }
 

@@ -89,7 +89,6 @@ fun AppNavigation(
                         popUpTo(0) { inclusive = true }
                     }
                 },
-                // --- AGREGAS ESTA LÍNEA PARA VOLVER AL INICIO ---
                 onIrAInicio = {
                     navController.navigate(Rutas.MenuPrincipal.ruta)
                 }

@@ -1,6 +1,15 @@
 package com.example.rinconsur.ui.screens
 
-import android.util.Patterns
+
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -8,31 +17,30 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.LockReset
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.rinconsur.ui.components.RinconSurCampoTexto
@@ -46,10 +54,45 @@ fun RecuperarContrasenaScreen(
     onContrasenaCreada: () -> Unit,
     viewModel: RecuperarContrasenaViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var correo by rememberSaveable { mutableStateOf("") }
-    var errorCorreo by rememberSaveable { mutableStateOf<String?>(null) }
-    var enlaceEnviado by rememberSaveable { mutableStateOf(false) }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    val permisoNotificacionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult ={}
+    )
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED){
+                permisoNotificacionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    fun enviarNotificacionReal(codigo: String){
+        val channelId = "canal_sms_recuperacion"
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "SMS de Recuperación",
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val builder = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("Nuevo mensaje SMS")
+            .setContentText("Rincon Sur: Tu código de recuperacion es $codigo")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+
+        notificationManager.notify(1001, builder.build())
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -63,151 +106,102 @@ fun RecuperarContrasenaScreen(
             verticalArrangement = Arrangement.Center
         ) {
             IconButton(onClick = onVolver) {
-                Icon(
-                    imageVector = Icons.Outlined.ArrowBack,
-                    contentDescription = "Volver"
-                )
+                Icon(imageVector = Icons.Outlined.ArrowBack, contentDescription = "Volver")
             }
 
             Spacer(Modifier.height(24.dp))
-
             Icon(
-                imageVector = if (enlaceEnviado) {
-                    Icons.Outlined.CheckCircle
-                } else {
-                    Icons.Outlined.LockReset
-                },
+                imageVector = Icons.Outlined.LockReset,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(48.dp)
             )
 
             Text(
-                text = if (enlaceEnviado) {
-                    "Revisa tu correo"
-                } else {
-                    "Recupera tu acceso"
-                },
+                text = "Recupera tu acceso",
                 modifier = Modifier.padding(top = 16.dp),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold
             )
-
-            Text(
-                text = if (enlaceEnviado) {
-                    "Enviamos las instrucciones a $correo. El enlace será válido durante 30 minutos."
-                } else {
-                    "Ingresa tu correo y te enviaremos un enlace para crear una nueva contraseña."
-                },
-                modifier = Modifier.padding(top = 8.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium
-            )
-
             Spacer(Modifier.height(28.dp))
 
-            if (enlaceEnviado) {
-                TarjetaDestacada(
-                    modificador = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Solicitud Registrada",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
+            when (state.pasoActual) {
+                1 -> {
+                    Text("Ingresa tu correo para validar si estás registrado.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(20.dp))
+                    RinconSurCampoTexto(
+                        value = state.correo,
+                        onValueChange = { viewModel.onCorreoCambia(it) },
+                        label = "Correo",
+                        placeholder = "nombre@rinconsur.cl",
+                        errorMensaje = state.errorCorreo,
+                        keyboardType = KeyboardType.Email,
+                        leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null) }
                     )
-
-                    Text(
-                        text = "Si no encuentras el mensaje, revisa tu bandeja de entrada",
-                        modifier = Modifier.padding(top = 6.dp),
-                        style = MaterialTheme.typography.bodySmall
+                    Spacer(Modifier.height(20.dp))
+                    BotonPrincipalAnchoCompleto(
+                        texto = "Enviar Código SMS",
+                        alPresionar = {
+                            val codigoSms = viewModel.onEnviarSms()
+                            if (codigoSms != null) {
+                                enviarNotificacionReal(codigoSms)
+                            }
+                        }
                     )
                 }
 
-                Spacer(Modifier.height(16.dp))
-
-                TextButton(
-                    onClick = {
-                        enlaceEnviado = false
-                    },
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) {
-                    Text("Enviar Nuevamente")
+                2 -> {
+                    TarjetaDestacada(modificador = Modifier.fillMaxWidth()) {
+                        Text("SMS Enviado", fontWeight = FontWeight.Bold)
+                        Text("Ingresa el código de 6 dígitos que enviamos a tu celular.", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    RinconSurCampoTexto(
+                        value = state.codigoSmsIngresado,
+                        onValueChange = { viewModel.onCodigoSmsCambia(it) },
+                        label = "Código SMS",
+                        errorMensaje = state.errorCodigoSms,
+                        keyboardType = KeyboardType.Number
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    BotonPrincipalAnchoCompleto(
+                        texto = "Verificar Código",
+                        alPresionar = { viewModel.onVerificarCodigoSms() }
+                    )
                 }
 
-                Spacer(Modifier.height(16.dp))
-
-                Button(
-                    onClick = {
-                        val creada = viewModel.onCrearContrasena()
-                        if (creada) {
-                            onContrasenaCreada()
+                3 -> {
+                    Text("Crea una nueva contraseña segura.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(20.dp))
+                    RinconSurCampoTexto(
+                        value = state.nuevaContrasena,
+                        onValueChange = { viewModel.onNuevaContrasenaCambia(it) },
+                        label = "Nueva contraseña",
+                        errorMensaje = state.errorNuevaContrasena,
+                        visualTransformation = if (state.nuevaContrasenaVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardType = KeyboardType.Password
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    RinconSurCampoTexto(
+                        value = state.confirmarContrasena,
+                        onValueChange = { viewModel.onConfirmarContrasenaCambia(it) },
+                        label = "Confirmar contraseña",
+                        errorMensaje = state.errorConfirmacion,
+                        visualTransformation = if (state.nuevaContrasenaVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardType = KeyboardType.Password
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    BotonPrincipalAnchoCompleto(
+                        texto = "Guardar Nueva Contraseña",
+                        alPresionar = {
+                            if (viewModel.onCrearContrasena()) {
+                                Toast.makeText(context, "Contraseña actualizada exitosamente", Toast.LENGTH_SHORT).show()
+                                onContrasenaCreada()
+                            }
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Crear contraseña")
+                    )
                 }
-
-                Spacer(Modifier.height(12.dp))
-
-                BotonPrincipalAnchoCompleto(
-                    texto = "Volver a iniciar sesión",
-                    alPresionar = onVolver
-                )
-            } else {
-                RinconSurCampoTexto(
-                    value = correo,
-                    onValueChange = {
-                        correo = it
-                        errorCorreo = null
-                    },
-                    label = "Correo",
-                    placeholder = "nombre@rinconsur.cl",
-                    errorMensaje = errorCorreo,
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Done,
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Email,
-                            contentDescription = null
-                        )
-                    }
-                )
-
-                Spacer(Modifier.height(20.dp))
-
-                BotonPrincipalAnchoCompleto(
-                    texto = "Enviar Enlace",
-                    alPresionar = {
-                        val correoLimpio = correo.trim()
-
-                        errorCorreo = when {
-                            correoLimpio.isBlank() -> {
-                                "Ingresa tu correo."
-                            }
-
-                            !Patterns.EMAIL_ADDRESS
-                                .matcher(correoLimpio)
-                                .matches() -> {
-                                "Ingresa un correo válido."
-                            }
-
-                            !correoLimpio.endsWith(
-                                "@rinconsur.cl",
-                                ignoreCase = true
-                            ) -> {
-                                "Usa tu correo @rinconsur.cl."
-                            }
-
-                            else -> null
-                        }
-
-                        if (errorCorreo == null) {
-                            correo = correoLimpio
-                            enlaceEnviado = true
-                            viewModel.onCorreoCambia(correoLimpio)
-                        }
-                    }
-                )
             }
         }
     }
