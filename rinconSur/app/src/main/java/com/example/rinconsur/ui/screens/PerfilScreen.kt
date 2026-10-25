@@ -1,8 +1,11 @@
 package com.example.rinconsur.ui.screens
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,6 +57,10 @@ fun PerfilScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    var mostrarOpcionesFoto by remember { mutableStateOf(false) }
+    var mostrarDialogoEditar by remember { mutableStateOf(false) }
+    var textoInputDescripcion by remember { mutableStateOf("") }
+
     val takePictureLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
@@ -69,7 +77,91 @@ fun PerfilScreen(
         else Toast.makeText(context, "Permiso denegado", Toast.LENGTH_SHORT).show()
     }
 
-    // Columna principal sin Scaffold, con el botón de retroceso integrado arriba
+    val pickGalleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val bitmap = uriABitmap(context, uri)
+            if (bitmap != null) {
+                viewModel.actualizarFoto(bitmap, correoUsuario)
+                Toast.makeText(context, "Foto actualizada", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "No se pudo cargar la imagen", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    if (mostrarOpcionesFoto){
+        AlertDialog(
+            onDismissRequest = { mostrarOpcionesFoto = false},
+            title = {Text("Cambiar foto de perfil")},
+            text = { Text("Elige desde donde quieres seleccinar tu nueva foto")},
+            confirmButton = {
+                TextButton(onClick = {
+                    mostrarOpcionesFoto = false
+                    val permissionCheckerResult = ContextCompat.checkSelfPermission(context,
+                        Manifest.permission.CAMERA)
+                    if (permissionCheckerResult == PackageManager.PERMISSION_GRANTED){
+                        takePictureLauncher.launch(null)
+                    }else{
+                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                }){
+                    Text("Camara", color = Petroleo800)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    mostrarOpcionesFoto = false
+                    pickGalleryLauncher.launch("image/*")
+                }) {
+                    Text("Galeria", color = Petroleo800)
+                }
+            }
+        )
+    }
+
+    if (mostrarDialogoEditar) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoEditar = false },
+            title = { Text("Editar perfil", fontWeight = FontWeight.Bold, color = Petroleo800) },
+            text = {
+                Column {
+                    Text("Agrega una breve descripción o estado para tu perfil", color = TextoSecundario, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = textoInputDescripcion,
+                        onValueChange = { textoInputDescripcion = it },
+                        label = { Text("Descripción") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = false,
+                        maxLines = 3
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        // 1. Guardamos usando el correo del usuario y el texto ingresado
+                        viewModel.actualizarDescripcion(correoUsuario, textoInputDescripcion)
+                        mostrarDialogoEditar = false
+                        Toast.makeText(context, "Perfil actualizado", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Petroleo800)
+                ) {
+                    Text("Guardar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogoEditar = false }) {
+                    Text("Cancelar", color = Petroleo800)
+                }
+            }
+        )
+    }
+
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -84,7 +176,6 @@ fun PerfilScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // BOTÓN DE FLECHA HACIA ATRÁS
             IconButton(
                 onClick = onIrAInicio,
                 modifier = Modifier
@@ -139,7 +230,9 @@ fun PerfilScreen(
             Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(80.dp), contentAlignment = Alignment.BottomEnd) {
                     Box(
-                        modifier = Modifier.size(76.dp).clip(CircleShape).background(Petroleo800),
+                        modifier = Modifier.size(76.dp)
+                            .clip(CircleShape)
+                            .background(Petroleo800),
                         contentAlignment = Alignment.Center
                     ) {
                         if (state.fotoBitmap != null) {
@@ -149,7 +242,10 @@ fun PerfilScreen(
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            val iniciales = if (state.nombre.isNotBlank()) state.nombre.take(2).uppercase() else "US"
+                            val iniciales = if (state.nombre.isNotBlank()) state.nombre
+                                .take(2)
+                                .uppercase()
+                            else "US"
                             Text(iniciales, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)
                         }
                     }
@@ -158,18 +254,17 @@ fun PerfilScreen(
                             .size(28.dp)
                             .clip(CircleShape)
                             .background(Superficie)
-                            .clickable {
-                                val permissionCheckResult = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-                                if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {
-                                    takePictureLauncher.launch(null)
-                                } else {
-                                    permissionLauncher.launch(Manifest.permission.CAMERA)
-                                }
-                            }
+                            .clickable { mostrarOpcionesFoto = true }
                             .padding(2.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Outlined.CameraAlt, contentDescription = stringResource(id = R.string.desc_cambiar_foto), tint = Ambar600, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Outlined.CameraAlt,
+                            contentDescription = stringResource(
+                                id = R.string.desc_cambiar_foto
+                            ),
+                            tint = Ambar600,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
 
@@ -178,9 +273,24 @@ fun PerfilScreen(
                 Column {
                     Text(state.nombre, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Petroleo800)
                     Text(state.cargo, fontSize = 12.sp, color = TextoSecundario)
+
+                    if (state.descripcion.isNotBlank())  {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "\"${state.descripcion}\"",
+                            fontSize = 13.sp,
+                            color = Petroleo800,
+                            fontStyle = FontStyle.Italic,
+                            lineHeight = 16.sp
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
-                        onClick = { },
+                        onClick = {
+                            textoInputDescripcion = state.descripcion
+                            mostrarDialogoEditar = true
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = Petroleo800),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.height(32.dp),
@@ -254,5 +364,36 @@ fun PerfilScreen(
         }
 
         Spacer(modifier = Modifier.height(40.dp))
+    }
+}
+
+private fun uriABitmap(context: Context, uri: Uri, maxLado: Int = 512): Bitmap? {
+    return try {
+        val bordes = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, bordes)
+        }
+
+        var muestra = 1
+        while (bordes.outWidth / muestra > maxLado * 2 || bordes.outHeight / muestra > maxLado * 2) {
+            muestra *= 2
+        }
+
+        val opciones = BitmapFactory.Options().apply { inSampleSize = muestra }
+        val bmp = context.contentResolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, opciones)
+        } ?: return null
+
+        val escala = maxLado.toFloat() / maxOf(bmp.width, bmp.height)
+        if (escala < 1f) {
+            Bitmap.createScaledBitmap(
+                bmp,
+                (bmp.width * escala).toInt(),
+                (bmp.height * escala).toInt(),
+                true
+            )
+        } else bmp
+    } catch (e: Exception) {
+        null
     }
 }

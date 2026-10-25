@@ -90,7 +90,7 @@ fun AppNavigation(
                     }
                 },
                 onIrAInicio = {
-                    navController.navigate(Rutas.MenuPrincipal.ruta)
+                    navController.popBackStack()
                 }
             )
         }

@@ -15,6 +15,7 @@ data class PerfilUiState(
     val nombre: String = "",
     val cargo: String = "",
     val fotoBitmap: Bitmap? = null,
+    val descripcion: String = "",
     val miembrosEquipo: String = "",
     val sesionesCompletadas: String = "",
     val permisosCodigo: String = "",
@@ -48,8 +49,8 @@ class PerfilViewModel(application: Application): AndroidViewModel(application){
                     sesionesCompletadas = if (esSupervisor)"8" else "2",
                     permisosCodigo = if (esSupervisor)"P-03" else "P-01",
                     datosPendientes = if (esSupervisor) "0 pendientes" else "1 pendiente",
-                    fotoBitmap = bitmapGuardado
-
+                    fotoBitmap = bitmapGuardado,
+                    descripcion = usuario.descripcion ?: ""
                 )
             }
         }
@@ -62,4 +63,12 @@ class PerfilViewModel(application: Application): AndroidViewModel(application){
 
         dbHelper.actualizarAvatar(correo, bytes)
     }
+
+    fun actualizarDescripcion(correo: String, nuevaDescripcion: String){
+        dbHelper.actualizarDescripcion(correo, nuevaDescripcion)
+        _uiState.update { currentState ->
+            currentState.copy(descripcion = nuevaDescripcion)
+        }
+    }
+
 }

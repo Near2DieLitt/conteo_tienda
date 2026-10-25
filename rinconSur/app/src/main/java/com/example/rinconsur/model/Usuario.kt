@@ -7,5 +7,6 @@ data class Usuario(
     val correo: String,
     val passwordHash: String,
     val rol: RolUsuario,
-    val avatar: ByteArray? = null
+    val avatar: ByteArray? = null,
+    val descripcion: String? = null
 )
