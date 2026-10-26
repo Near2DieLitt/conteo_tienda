@@ -1,5 +1,6 @@
 package com.example.rinconsur.ui.screens
 
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,6 +22,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.rinconsur.model.RolUsuario
+import com.example.rinconsur.ui.components.BarraNavegacionInferior
+import com.example.rinconsur.ui.components.DestinoBarra
 import com.example.rinconsur.ui.components.TarjetaAccesosActivos
 import com.example.rinconsur.ui.components.TarjetaSesionMenu
 import com.example.rinconsur.viewmodel.MenuPrincipalViewmodel
@@ -57,54 +60,17 @@ fun MenuPrincipalScreen(
             }
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = Color(0xFF103336),
-                contentColor = Color.White
-            ) {
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { },
-                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Inicio") },
-                    label = { Text("Inicio", fontSize = 11.sp) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFFE2A253),
-                        selectedTextColor = Color(0xFFE2A253),
-                        unselectedIconColor = Color.LightGray,
-                        unselectedTextColor = Color.LightGray,
-                        indicatorColor = Color.Transparent
-                    )
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavegarSesiones,
-                    icon = { Icon(Icons.Outlined.CalendarToday, contentDescription = "Sesiones") },
-                    label = { Text("Sesiones", fontSize = 11.sp) },
-                    colors = NavigationBarItemDefaults.colors(
-                        unselectedIconColor = Color.LightGray,
-                        unselectedTextColor = Color.LightGray
-                    )
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavegarAnalitica,
-                    icon = { Icon(Icons.Outlined.BarChart, contentDescription = "Analítica") },
-                    label = { Text("Analítica", fontSize = 11.sp) },
-                    colors = NavigationBarItemDefaults.colors(
-                        unselectedIconColor = Color.LightGray,
-                        unselectedTextColor = Color.LightGray
-                    )
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavegarPerfil,
-                    icon = { Icon(Icons.Outlined.Person, contentDescription = "Perfil") },
-                    label = { Text("Perfil", fontSize = 11.sp) },
-                    colors = NavigationBarItemDefaults.colors(
-                        unselectedIconColor = Color.LightGray,
-                        unselectedTextColor = Color.LightGray
-                    )
-                )
-            }
+            BarraNavegacionInferior(
+                seleccionado = DestinoBarra.INICIO,
+                onNavegar = { destino ->
+                    when (destino) {
+                        DestinoBarra.INICIO -> {}
+                        DestinoBarra.SESIONES -> onNavegarSesiones()
+                        DestinoBarra.ANALITICA -> onNavegarAnalitica()
+                        DestinoBarra.PERFIL -> onNavegarPerfil()
+                    }
+                }
+            )
         }
     ) { paddingValues ->
         Column(
