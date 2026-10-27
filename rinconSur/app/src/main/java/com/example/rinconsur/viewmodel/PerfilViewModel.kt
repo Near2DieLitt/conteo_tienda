@@ -40,14 +40,16 @@ class PerfilViewModel(application: Application): AndroidViewModel(application){
                 ConvertidorImagen.aBitmap(usuario.avatar)
             }else null
 
+            val completadasCount = dbHelper.contarSesionesCompletadas()
+
             _uiState.update {
                 it.copy(
                     nombre = usuario.nombre,
                     cargo = if (esSupervisor) "Supervisora de piso * Turno mañana"
                             else "Observador de piso * turno mañana",
-                    miembrosEquipo = if (esSupervisor)"4 miembros" else "Sin equipo asignado",
-                    sesionesCompletadas = if (esSupervisor)"8" else "2",
-                    permisosCodigo = if (esSupervisor)"P-03" else "P-01",
+                    miembrosEquipo = if (esSupervisor) "4 miembros" else "Sin equipo asignado",
+                    sesionesCompletadas = "$completadasCount",
+                    permisosCodigo = if (esSupervisor) "P-03" else "P-01",
                     datosPendientes = if (esSupervisor) "0 pendientes" else "1 pendiente",
                     fotoBitmap = bitmapGuardado,
                     descripcion = usuario.descripcion ?: ""

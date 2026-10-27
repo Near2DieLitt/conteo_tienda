@@ -21,4 +21,16 @@ class SesionPreferencias (context: Context){
     fun borrar(){
         prefs.edit{remove(CLAVE_ID_USUARIO)}
     }
+
+    fun guardarEntradaActiva(codigo: String) {
+        prefs.edit { putString("entrada_activa", codigo) }
+    }
+
+    fun obtenerEntradaActiva(): String? {
+        return prefs.getString("entrada_activa", null)
+    }
+
+    fun borrarEntradaActiva() {
+        prefs.edit { remove("entrada_activa") }
+    }
 }

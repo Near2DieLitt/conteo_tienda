@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import com.example.rinconsur.R
 import com.example.rinconsur.ui.components.EtiquetaPerfil
 import com.example.rinconsur.ui.components.ItemListaPerfil
@@ -56,6 +57,8 @@ fun PerfilScreen(
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var mostrarOpcionesFoto by remember { mutableStateOf(false) }
     var mostrarDialogoEditar by remember { mutableStateOf(false) }
@@ -65,8 +68,11 @@ fun PerfilScreen(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
         if (bitmap != null) {
-            viewModel.actualizarFoto(bitmap, correoUsuario)
-            Toast.makeText(context, "Foto actualizada", Toast.LENGTH_SHORT).show()
+            val fotoCorregida = com.example.rinconsur.data.ConvertidorImagen.corregirRotacionCamara(bitmap)
+            viewModel.actualizarFoto(fotoCorregida, correoUsuario)
+            scope.launch {
+                snackbarHostState.showSnackbar("Foto de perfil actualizada")
+            }
         }
     }
 
@@ -74,19 +80,27 @@ fun PerfilScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) takePictureLauncher.launch(null)
-        else Toast.makeText(context, "Permiso denegado", Toast.LENGTH_SHORT).show()
+        else {
+            scope.launch {
+                snackbarHostState.showSnackbar("Permiso de cámara denegado")
+            }
+        }
     }
 
     val pickGalleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            val bitmap = uriABitmap(context, uri)
+            val bitmap = com.example.rinconsur.data.ConvertidorImagen.desdeUri(context, uri)
             if (bitmap != null) {
                 viewModel.actualizarFoto(bitmap, correoUsuario)
-                Toast.makeText(context, "Foto actualizada", Toast.LENGTH_SHORT).show()
+                scope.launch {
+                    snackbarHostState.showSnackbar("Foto de perfil actualizada")
+                }
             } else {
-                Toast.makeText(context, "No se pudo cargar la imagen", Toast.LENGTH_SHORT).show()
+                scope.launch {
+                    snackbarHostState.showSnackbar("No se pudo cargar la imagen")
+                }
             }
         }
     }
@@ -143,10 +157,11 @@ fun PerfilScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        // 1. Guardamos usando el correo del usuario y el texto ingresado
                         viewModel.actualizarDescripcion(correoUsuario, textoInputDescripcion)
                         mostrarDialogoEditar = false
-                        Toast.makeText(context, "Perfil actualizado", Toast.LENGTH_SHORT).show()
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Perfil actualizado correctamente")
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Petroleo800)
                 ) {
@@ -161,14 +176,18 @@ fun PerfilScreen(
         )
     }
 
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 24.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
         Spacer(modifier = Modifier.height(48.dp))
 
         Row(
@@ -365,6 +384,7 @@ fun PerfilScreen(
 
         Spacer(modifier = Modifier.height(40.dp))
     }
+}
 }
 
 private fun uriABitmap(context: Context, uri: Uri, maxLado: Int = 512): Bitmap? {

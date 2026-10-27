@@ -609,8 +609,11 @@ private fun DialogoNuevaSesion(
     onCancelar: () -> Unit,
     onGuardar: (String, String) -> Unit
 ) {
-    var codigo by remember { mutableStateOf("") }
-    var nombre by remember { mutableStateOf("") }
+    val entradasValidas = listOf("A1", "A2", "A3", "A4")
+    var codigo by remember { mutableStateOf("A1") }
+    var nombre by remember { mutableStateOf("Acceso ${com.example.rinconsur.model.Accesos.nombre("A1")}") }
+
+    val esValido = codigo.trim().uppercase() in entradasValidas && nombre.isNotBlank()
 
     AlertDialog(
         onDismissRequest = onCancelar,
@@ -619,15 +622,30 @@ private fun DialogoNuevaSesion(
             Column {
                 Text("Fecha: $fecha", fontSize = 13.sp, color = TextoSecundario)
                 Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = codigo,
-                    onValueChange = { if (it.length <= 3) codigo = it },
-                    label = { Text("Código (ej: A1)") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+
+                Text("Código de entrada:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Petroleo800)
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    entradasValidas.forEach { item ->
+                        val sel = codigo.equals(item, ignoreCase = true)
+                        FilterChip(
+                            selected = sel,
+                            onClick = {
+                                codigo = item
+                                nombre = "Acceso ${com.example.rinconsur.model.Accesos.nombre(item)}"
+                            },
+                            label = { Text(item, fontSize = 12.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 OutlinedTextField(
                     value = nombre,
                     onValueChange = { nombre = it },
@@ -636,12 +654,21 @@ private fun DialogoNuevaSesion(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                if (!esValido) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "La entrada debe ser A1, A2, A3 o A4",
+                        color = Color.Red,
+                        fontSize = 11.sp
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onGuardar(codigo, nombre) },
-                enabled = codigo.isNotBlank() && nombre.isNotBlank(),
+                onClick = { onGuardar(codigo.trim().uppercase(), nombre.trim()) },
+                enabled = esValido,
                 colors = ButtonDefaults.buttonColors(containerColor = Petroleo800)
             ) { Text("Guardar") }
         },

@@ -1,6 +1,5 @@
 package com.example.rinconsur.ui.screens
 
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -26,6 +25,8 @@ import com.example.rinconsur.ui.components.BarraNavegacionInferior
 import com.example.rinconsur.ui.components.DestinoBarra
 import com.example.rinconsur.ui.components.TarjetaAccesosActivos
 import com.example.rinconsur.ui.components.TarjetaSesionMenu
+import com.example.rinconsur.ui.components.TarjetaSinSesionActiva
+import com.example.rinconsur.ui.components.TarjetaVisitantesTienda
 import com.example.rinconsur.viewmodel.MenuPrincipalViewmodel
 
 @Composable
@@ -36,29 +37,55 @@ fun MenuPrincipalScreen(
     onNavegarSesiones: () -> Unit = {},
     onNavegarAnalitica: () -> Unit = {},
     onNavegarPerfil: () -> Unit = {},
+    onEscanearBoleta: () -> Unit = {},
     viewModel: MenuPrincipalViewmodel = viewModel()
 ) {
     LaunchedEffect(correoUsuario) {
         viewModel.cargarDatosUsuarios(correoUsuario)
+        viewModel.cargarVisitantes()
     }
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
+    var mostrarDialogoCierre by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
     val colorTarjetaFondo = Color(0xFFEBF3F0)
     val verdeResaltado = Color(0xFF0F5961)
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { },
-                containerColor = verdeResaltado,
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.padding(bottom = 8.dp)
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Agregar")
+    LaunchedEffect(state.mensajeInformativo) {
+        state.mensajeInformativo?.let { mensaje ->
+            snackbarHostState.showSnackbar(mensaje)
+            viewModel.limpiarMensaje()
+        }
+    }
+
+    if (mostrarDialogoCierre) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoCierre = false },
+            title = { Text("Confirmar Cierre Diario") },
+            text = { Text("¿Deseas ejecutar el Cierre Diario? Todos los visitantes actualmente 'En_Tienda' cambiarán a 'No_Compro', dejando el contador en 0.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        mostrarDialogoCierre = false
+                        viewModel.ejecutarCierreDiario()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = verdeResaltado)
+                ) {
+                    Text("Ejecutar Cierre")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogoCierre = false }) {
+                    Text("Cancelar")
+                }
             }
-        },
+        )
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             BarraNavegacionInferior(
                 seleccionado = DestinoBarra.INICIO,
@@ -174,6 +201,29 @@ fun MenuPrincipalScreen(
                 ),
                 singleLine = true
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+
+            if (state.esSesionIniciada && state.entradaActiva != null) {
+                TarjetaVisitantesTienda(
+                    resumen = state.resumenVisitantes,
+                    entradaActiva = state.entradaActiva!!,
+                    colorFondoContenedor = colorTarjetaFondo,
+                    verdeResaltado = verdeResaltado,
+                    onRegistrarEntrada = { rango -> viewModel.registrarEntradaVisitante(rango) },
+                    onRegistrarSalida = { viewModel.registrarSalidaSinCompra() },
+                    onEjecutarCierre = { mostrarDialogoCierre = true },
+                    onEscanearBoleta = onEscanearBoleta,
+                    onFinalizarSesion = { viewModel.finalizarSesionEntrada() }
+                )
+            } else {
+                TarjetaSinSesionActiva(
+                    colorFondoContenedor = colorTarjetaFondo,
+                    verdeResaltado = verdeResaltado,
+                    onIrASesiones = onNavegarSesiones
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

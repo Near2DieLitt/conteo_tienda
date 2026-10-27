@@ -84,9 +84,13 @@ class SesionesViewModel (application: Application): AndroidViewModel(application
 
     fun crearSesion(codigo: String, nombre: String): Boolean {
         if (!puedeEditar) return false
+        val codigoLimpio = codigo.trim().uppercase()
+        val entradasValidas = setOf("A1", "A2", "A3", "A4")
+        if (!entradasValidas.contains(codigoLimpio)) return false
+
         val fecha = _uiState.value.fechaSeleccionada
         if (fecha < Fechas.hoy()) return false
-        db.insertarSesion(codigo.trim().uppercase(), nombre.trim(), fecha)
+        db.insertarSesion(codigoLimpio, nombre.trim(), fecha)
         recargar()
         return true
     }

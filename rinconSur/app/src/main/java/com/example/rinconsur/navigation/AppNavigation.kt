@@ -17,6 +17,7 @@ import com.example.rinconsur.ui.screens.PerfilScreen
 import com.example.rinconsur.ui.screens.RecuperarContrasenaScreen
 import com.example.rinconsur.ui.screens.SesionesScreen
 import com.example.rinconsur.ui.screens.AnaliticaScreen
+import com.example.rinconsur.ui.screens.EscanearBoletaScreen
 
 @Composable
 fun AppNavigation(
@@ -74,11 +75,17 @@ fun AppNavigation(
                 correoUsuario = correoLogueado,
                 modoOscuro = modoOscuro,
                 onCambiarTema = onCambiarTema,
+                onNavegarSesiones = {
+                    navController.navigate(Rutas.Sesiones.ruta)
+                },
+                onNavegarAnalitica = {
+                    navController.irADestinoBarra(DestinoBarra.ANALITICA)
+                },
                 onNavegarPerfil = {
                     navController.navigate(Rutas.Perfil.ruta)
                 },
-                    onNavegarAnalitica = {
-                    navController.irADestinoBarra(DestinoBarra.ANALITICA)
+                onEscanearBoleta = {
+                    navController.navigate(Rutas.EscanearBoleta.ruta)
                 }
             )
         }
@@ -108,26 +115,20 @@ fun AppNavigation(
             )
         }
 
-        composable(Rutas.MenuPrincipal.ruta) {
-            MenuPrincipalScreen(
-                correoUsuario = correoLogueado,
-                modoOscuro = modoOscuro,
-                onCambiarTema = onCambiarTema,
-                onNavegarSesiones = {
-                    navController.navigate(Rutas.Sesiones.ruta)
-                },
-                onNavegarPerfil = {
-                    navController.navigate(Rutas.Perfil.ruta)
-                }
-            )
-        }
-
         composable(Rutas.Analitica.ruta) {
             AnaliticaScreen(
                 puedeEditar = true,
                 modoOscuro = modoOscuro,
                 onCambiarTema = onCambiarTema,
                 onNavegar = { destino -> navController.irADestinoBarra(destino) }
+            )
+        }
+
+        composable(Rutas.EscanearBoleta.ruta) {
+            EscanearBoletaScreen(
+                onVolver = {
+                    navController.popBackStack()
+                }
             )
         }
 

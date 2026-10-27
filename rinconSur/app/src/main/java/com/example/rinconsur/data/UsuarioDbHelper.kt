@@ -7,17 +7,24 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import at.favre.lib.crypto.bcrypt.BCrypt
 import com.example.rinconsur.model.ConteoSesion
+import com.example.rinconsur.model.RangoEtario
 import com.example.rinconsur.model.RegistroFlujo
+import com.example.rinconsur.model.ResultadoBoleta
 import com.example.rinconsur.model.ResumenFlujo
+import com.example.rinconsur.model.ResumenVisitantes
 import com.example.rinconsur.model.RolUsuario
 import com.example.rinconsur.model.SesionAcceso
 import com.example.rinconsur.model.Usuario
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 class UsuarioDbHelper (context: Context):
     SQLiteOpenHelper(context, NOMBRE_BD, null, VERSION_BD){
 
     companion object{
         private const val NOMBRE_BD = "rinconsur.db"
-        private const val VERSION_BD = 5
+        private const val VERSION_BD = 6
 
         private const val TABLA_USUARIOS = "usuarios"
         private const val USU_ID = "id_usuario"
@@ -32,6 +39,9 @@ class UsuarioDbHelper (context: Context):
         private const val TABLA_CONTEOS = "conteos"
 
         private const val TABLA_FLUJO = "registros_flujo"
+
+        private const val TABLA_VISITANTES = "visitantes"
+        private const val TABLA_BOLETAS = "boletas"
     }
 
     override fun onConfigure(db: SQLiteDatabase){
@@ -43,12 +53,12 @@ class UsuarioDbHelper (context: Context):
         val crearTablaUsuarios = """
             CREATE TABLE $TABLA_USUARIOS(
                 $USU_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                $USU_NOMBRE TEXT NOT NULL,
-                $USU_CORREO TEXT UNIQUE NOT NULL,
-                $USU_CONTRASENA TEXT NOT NULL,
-                $USU_ROL TEXT NOT NULL,
+                $USU_NOMBRE VARCHAR(100) NOT NULL,
+                $USU_CORREO VARCHAR(150) UNIQUE NOT NULL,
+                $USU_CONTRASENA VARCHAR(255) NOT NULL,
+                $USU_ROL VARCHAR(50) NOT NULL,
                 $USU_AVATAR BLOB,
-                $USU_DESCRIPCION TEXT
+                $USU_DESCRIPCION VARCHAR(255)
             )
         """.trimIndent()
         db.execSQL(crearTablaUsuarios)
@@ -56,9 +66,9 @@ class UsuarioDbHelper (context: Context):
         val crearTablaSesiones = """
             CREATE TABLE $TABLA_SESIONES(
                 id_sesion INTEGER PRIMARY KEY AUTOINCREMENT,
-                codigo TEXT NOT NULL,
-                nombre TEXT NOT NULL,
-                fecha TEXT NOT NULL,
+                codigo VARCHAR(50) NOT NULL,
+                nombre VARCHAR(100) NOT NULL,
+                fecha VARCHAR(20) NOT NULL,
                 activo INTEGER NOT NULL DEFAULT 1
             )
         """.trimIndent()
@@ -68,8 +78,8 @@ class UsuarioDbHelper (context: Context):
             CREATE TABLE $TABLA_CONTEOS(
                 id_conteo INTEGER PRIMARY KEY AUTOINCREMENT,
                 id_sesion INTEGER NOT NULL,
-                nombre TEXT NOT NULL,
-                horario TEXT NOT NULL,
+                nombre VARCHAR(100) NOT NULL,
+                horario VARCHAR(50) NOT NULL,
                 completado INTEGER NOT NULL DEFAULT 0,
                 activo INTEGER NOT NULL DEFAULT 1,
                 FOREIGN KEY(id_sesion) REFERENCES $TABLA_SESIONES(id_sesion)
@@ -80,8 +90,8 @@ class UsuarioDbHelper (context: Context):
         val crearTablaFlujo = """
             CREATE TABLE $TABLA_FLUJO(
                 id_registro INTEGER PRIMARY KEY AUTOINCREMENT,
-                acceso TEXT NOT NULL,
-                fecha TEXT NOT NULL,
+                acceso VARCHAR(50) NOT NULL,
+                fecha VARCHAR(20) NOT NULL,
                 ingresos INTEGER NOT NULL,
                 compradores INTEGER NOT NULL,
                 transito_joven INTEGER NOT NULL,
@@ -92,6 +102,28 @@ class UsuarioDbHelper (context: Context):
         """.trimIndent()
         db.execSQL(crearTablaFlujo)
 
+        val crearTablaVisitantes = """
+            CREATE TABLE $TABLA_VISITANTES(
+                id_visitante INTEGER PRIMARY KEY AUTOINCREMENT,
+                fecha VARCHAR(20) NOT NULL,
+                hora VARCHAR(20) NOT NULL,
+                estado VARCHAR(50) NOT NULL,
+                boleta VARCHAR(50)
+            )
+        """.trimIndent()
+        db.execSQL(crearTablaVisitantes)
+
+        val crearTablaBoletas = """
+            CREATE TABLE $TABLA_BOLETAS(
+                id_boleta INTEGER PRIMARY KEY AUTOINCREMENT,
+                folio VARCHAR(50) UNIQUE NOT NULL,
+                fecha VARCHAR(20) NOT NULL,
+                id_visitante INTEGER NOT NULL,
+                FOREIGN KEY(id_visitante) REFERENCES $TABLA_VISITANTES(id_visitante)
+            )
+        """.trimIndent()
+        db.execSQL(crearTablaBoletas)
+
         val hashObs = BCrypt.withDefaults().hashToString(12, "Observador123".toCharArray())
         val hashSup = BCrypt.withDefaults().hashToString(12, "Supervisor123".toCharArray())
 
@@ -100,7 +132,10 @@ class UsuarioDbHelper (context: Context):
     }
 
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int){db.execSQL("DROP TABLE IF EXISTS $TABLA_FLUJO")
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int){
+        db.execSQL("DROP TABLE IF EXISTS $TABLA_BOLETAS")
+        db.execSQL("DROP TABLE IF EXISTS $TABLA_VISITANTES")
+        db.execSQL("DROP TABLE IF EXISTS $TABLA_FLUJO")
         db.execSQL("DROP TABLE IF EXISTS $TABLA_CONTEOS")
         db.execSQL("DROP TABLE IF EXISTS $TABLA_SESIONES")
         db.execSQL("DROP TABLE IF EXISTS $TABLA_USUARIOS")
@@ -201,6 +236,32 @@ class UsuarioDbHelper (context: Context):
         writableDatabase.update(TABLA_SESIONES, valores, "id_sesion = ?", arrayOf(idSesion.toString()))
     }
 
+    fun finalizarSesion(idSesion: Long) {
+        val db = writableDatabase
+        val valoresSesion = ContentValues().apply { put("activo", 0) }
+        db.update(TABLA_SESIONES, valoresSesion, "id_sesion = ?", arrayOf(idSesion.toString()))
+
+        val valoresConteos = ContentValues().apply { put("completado", 1) }
+        db.update(TABLA_CONTEOS, valoresConteos, "id_sesion = ?", arrayOf(idSesion.toString()))
+    }
+
+    fun finalizarSesionPorCodigo(codigo: String, fecha: String = Fechas.hoy()) {
+        val db = writableDatabase
+        val cursor = db.rawQuery(
+            "SELECT id_sesion FROM $TABLA_SESIONES WHERE fecha = ? AND UPPER(codigo) = UPPER(?) AND activo = 1",
+            arrayOf(fecha, codigo.trim())
+        )
+        val idsFinalizar = mutableListOf<Long>()
+        while (cursor.moveToNext()) {
+            idsFinalizar.add(cursor.getLong(0))
+        }
+        cursor.close()
+
+        idsFinalizar.forEach { id ->
+            finalizarSesion(id)
+        }
+    }
+
     fun insertarConteo(idSesion: Long, nombre: String, horario: String) {
         val valores = ContentValues().apply {
             put("id_sesion", idSesion)
@@ -271,6 +332,19 @@ class UsuarioDbHelper (context: Context):
             }
         }
         return lista
+    }
+
+    fun contarSesionesCompletadas(): Int {
+        val db = readableDatabase
+        val countInactivas = db.rawQuery(
+            "SELECT COUNT(*) FROM $TABLA_SESIONES WHERE activo = 0",
+            null
+        ).use { c -> if (c.moveToFirst()) c.getInt(0) else 0 }
+
+        val todas = obtenerSesiones("0000-01-01", "2099-12-31", incluirInactivas = true)
+        val countFinConteos = todas.count { (it.conteos.isNotEmpty() && it.avance == 100) || !it.activo }
+
+        return maxOf(countInactivas, countFinConteos)
     }
 
     fun contarSesiones(desde: String, hasta: String, acceso: String?): Int {
@@ -407,5 +481,261 @@ class UsuarioDbHelper (context: Context):
             }
         }
         return lista
+    }
+    fun registrarEntradaVisitante(fecha: String = Fechas.hoy()): Long {
+        val hora = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+        val valores = ContentValues().apply {
+            put("fecha", fecha)
+            put("hora", hora)
+            put("estado", "En_Tienda")
+        }
+        return writableDatabase.insert(TABLA_VISITANTES, null, valores)
+    }
+
+    fun registrarSalidaVisitanteSinCompra(fecha: String = Fechas.hoy()): Boolean {
+        val db = writableDatabase
+        var idVisitante: Long? = null
+
+        val cursor = db.rawQuery(
+            "SELECT id_visitante FROM $TABLA_VISITANTES " +
+                    "WHERE fecha = ? AND estado = 'En_Tienda' " +
+                    "ORDER BY id_visitante ASC LIMIT 1",
+            arrayOf(fecha)
+        )
+        if (cursor.moveToFirst()) {
+            idVisitante = cursor.getLong(0)
+        }
+        cursor.close()
+
+        return if (idVisitante != null) {
+            val valores = ContentValues().apply {
+                put("estado", "No_Compro")
+            }
+            val filas = db.update(
+                TABLA_VISITANTES,
+                valores,
+                "id_visitante = ?",
+                arrayOf(idVisitante.toString())
+            )
+            filas > 0
+        } else {
+            false
+        }
+    }
+
+    fun validarEstructuraBoleta(folio: String): Boolean {
+        val folioLimpio = folio.trim()
+        return folioLimpio.matches(Regex("^[0-9]{6,10}$"))
+    }
+
+    fun esBoletaRegistrada(folio: String): Boolean {
+        val db = readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT 1 FROM $TABLA_BOLETAS WHERE LOWER(TRIM(folio)) = LOWER(TRIM(?))",
+            arrayOf(folio)
+        )
+        val existe = cursor.moveToFirst()
+        cursor.close()
+        return existe
+    }
+
+    fun procesarBoleta(
+        folio: String,
+        accesoActivo: String? = null,
+        fecha: String = Fechas.hoy()
+    ): ResultadoBoleta {
+        val folioLimpio = folio.trim()
+
+        if (!validarEstructuraBoleta(folioLimpio)) {
+            return ResultadoBoleta.FormatoInvalido
+        }
+
+        if (esBoletaRegistrada(folioLimpio)) {
+            return ResultadoBoleta.YaProcesada
+        }
+
+        val db = writableDatabase
+        var idVisitante: Long? = null
+
+        val cursor = db.rawQuery(
+            "SELECT id_visitante FROM $TABLA_VISITANTES " +
+                    "WHERE fecha = ? AND estado = 'En_Tienda' " +
+                    "ORDER BY id_visitante ASC LIMIT 1",
+            arrayOf(fecha)
+        )
+        if (cursor.moveToFirst()) {
+            idVisitante = cursor.getLong(0)
+        }
+        cursor.close()
+
+        if (idVisitante == null) {
+            return ResultadoBoleta.SinVisitanteActivo
+        }
+
+        db.beginTransaction()
+        try {
+            val valoresBoleta = ContentValues().apply {
+                put("folio", folioLimpio)
+                put("fecha", fecha)
+                put("id_visitante", idVisitante)
+            }
+            db.insert(TABLA_BOLETAS, null, valoresBoleta)
+
+            val valoresVisitante = ContentValues().apply {
+                put("estado", "Compro")
+                put("boleta", folioLimpio)
+            }
+            db.update(
+                TABLA_VISITANTES,
+                valoresVisitante,
+                "id_visitante = ?",
+                arrayOf(idVisitante.toString())
+            )
+
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+
+        if (!accesoActivo.isNullOrBlank()) {
+            registrarOActualizarFlujo(
+                acceso = accesoActivo,
+                fecha = fecha,
+                deltaIngresos = 0,
+                deltaCompradores = 1
+            )
+        }
+
+        return ResultadoBoleta.Exito(idVisitante, folioLimpio)
+    }
+
+    fun obtenerSesionesActivasEntrada(fecha: String = Fechas.hoy()): List<SesionAcceso> {
+        val db = readableDatabase
+        val lista = mutableListOf<SesionAcceso>()
+        db.rawQuery(
+            "SELECT id_sesion, codigo, nombre, fecha, activo FROM $TABLA_SESIONES " +
+                    "WHERE fecha = ? AND activo = 1 AND UPPER(codigo) IN ('A1', 'A2', 'A3', 'A4') " +
+                    "ORDER BY id_sesion DESC",
+            arrayOf(fecha)
+        ).use { c ->
+            while (c.moveToNext()) {
+                val id = c.getLong(0)
+                lista.add(
+                    SesionAcceso(
+                        id = id,
+                        codigo = c.getString(1),
+                        nombre = c.getString(2),
+                        fecha = c.getString(3),
+                        activo = c.getInt(4) == 1,
+                        conteos = emptyList()
+                    )
+                )
+            }
+        }
+        return lista
+    }
+
+    fun registrarOActualizarFlujo(
+        acceso: String,
+        fecha: String = Fechas.hoy(),
+        deltaIngresos: Int = 0,
+        deltaCompradores: Int = 0,
+        rangoEtario: RangoEtario = RangoEtario.ADULTO
+    ) {
+        val db = writableDatabase
+        val cursor = db.rawQuery(
+            "SELECT id_registro, ingresos, compradores, transito_joven, transito_adulto, transito_mayor " +
+                    "FROM $TABLA_FLUJO WHERE fecha = ? AND acceso = ? AND activo = 1 LIMIT 1",
+            arrayOf(fecha, acceso)
+        )
+
+        if (cursor.moveToFirst()) {
+            val id = cursor.getLong(0)
+            val ingresosAct = cursor.getInt(1) + deltaIngresos
+            val compradoresAct = cursor.getInt(2) + deltaCompradores
+            var jovenAct = cursor.getInt(3)
+            var adultoAct = cursor.getInt(4)
+            var mayorAct = cursor.getInt(5)
+
+            if (deltaIngresos > 0) {
+                when (rangoEtario) {
+                    RangoEtario.JOVEN -> jovenAct += deltaIngresos
+                    RangoEtario.ADULTO -> adultoAct += deltaIngresos
+                    RangoEtario.PERSONA_MAYOR, RangoEtario.NO_DETERMINADO, RangoEtario.NINO -> mayorAct += deltaIngresos
+                }
+            }
+
+            val valores = ContentValues().apply {
+                put("ingresos", ingresosAct.coerceAtLeast(0))
+                put("compradores", compradoresAct.coerceAtLeast(0))
+                put("transito_joven", jovenAct.coerceAtLeast(0))
+                put("transito_adulto", adultoAct.coerceAtLeast(0))
+                put("transito_mayor", mayorAct.coerceAtLeast(0))
+            }
+            db.update(TABLA_FLUJO, valores, "id_registro = ?", arrayOf(id.toString()))
+        } else {
+            var joven = 0
+            var adulto = 0
+            var mayor = 0
+
+            if (deltaIngresos > 0) {
+                when (rangoEtario) {
+                    RangoEtario.JOVEN -> joven = deltaIngresos
+                    RangoEtario.ADULTO -> adulto = deltaIngresos
+                    RangoEtario.PERSONA_MAYOR, RangoEtario.NO_DETERMINADO, RangoEtario.NINO -> mayor = deltaIngresos
+                }
+            }
+
+            val valores = ContentValues().apply {
+                put("acceso", acceso)
+                put("fecha", fecha)
+                put("ingresos", deltaIngresos.coerceAtLeast(1))
+                put("compradores", deltaCompradores.coerceAtLeast(0))
+                put("transito_joven", joven)
+                put("transito_adulto", adulto)
+                put("transito_mayor", mayor)
+                put("activo", 1)
+            }
+            db.insert(TABLA_FLUJO, null, valores)
+        }
+        cursor.close()
+    }
+
+    fun obtenerResumenVisitantes(fecha: String = Fechas.hoy()): ResumenVisitantes {
+        val db = readableDatabase
+        var enTienda = 0
+        var compro = 0
+        var noCompro = 0
+
+        val cursor = db.rawQuery(
+            "SELECT estado, COUNT(*) FROM $TABLA_VISITANTES WHERE fecha = ? GROUP BY estado",
+            arrayOf(fecha)
+        )
+        while (cursor.moveToNext()) {
+            val estado = cursor.getString(0)
+            val cantidad = cursor.getInt(1)
+            when (estado) {
+                "En_Tienda" -> enTienda = cantidad
+                "Compro" -> compro = cantidad
+                "No_Compro" -> noCompro = cantidad
+            }
+        }
+        cursor.close()
+
+        val total = enTienda + compro + noCompro
+        return ResumenVisitantes(enTienda, compro, noCompro, total)
+    }
+
+    fun ejecutarCierreDiario(fecha: String = Fechas.hoy()): Int {
+        val db = writableDatabase
+        val valores = ContentValues().apply {
+            put("estado", "No_Compro")
+        }
+        return db.update(
+            TABLA_VISITANTES,
+            valores,
+            "fecha = ? AND estado = 'En_Tienda'",
+            arrayOf(fecha)
+        )
     }
 }
