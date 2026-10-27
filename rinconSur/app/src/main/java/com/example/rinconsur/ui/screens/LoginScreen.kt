@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -40,7 +41,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -61,6 +64,7 @@ fun LoginScreen(
     onOlvidoContrasena: () -> Unit,
     onIngresoObservador: (String) -> Unit,
     onIngresoSupervisor: (String) -> Unit,
+    onIngresoAdmin: (String) -> Unit,
     loginViewModel: LoginViewModel = viewModel()
 ) {
     val uiState by loginViewModel.uiState.collectAsStateWithLifecycle()
@@ -88,6 +92,10 @@ fun LoginScreen(
 
             RolUsuario.SUPERVISOR -> {
                 onIngresoSupervisor(usuario.correo)
+            }
+
+            RolUsuario.ADMIN -> {
+                onIngresoAdmin(usuario.correo)
             }
         }
 
@@ -350,6 +358,8 @@ fun LoginScreen(
                     end = 16.dp
                 )
                 .size(48.dp)
+                .clip(CircleShape)
+                .background(if (modoOscuro) Color(0xFF163E45) else Color.White)
         ) {
             Icon(
                 imageVector =
@@ -364,7 +374,7 @@ fun LoginScreen(
                     } else {
                         "Activar modo oscuro"
                     },
-                tint = MaterialTheme.colorScheme.primary
+                tint = if (modoOscuro) Color.White else MaterialTheme.colorScheme.primary
             )
         }
     }

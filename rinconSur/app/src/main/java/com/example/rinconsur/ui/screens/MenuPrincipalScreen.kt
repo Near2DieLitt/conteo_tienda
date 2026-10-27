@@ -31,11 +31,12 @@ import com.example.rinconsur.viewmodel.MenuPrincipalViewmodel
 
 @Composable
 fun MenuPrincipalScreen(
-    correoUsuario: String = "observador@rinconsur.cl",
+    correoUsuario: String = "",
     modoOscuro: Boolean,
     onCambiarTema: () -> Unit,
     onNavegarSesiones: () -> Unit = {},
     onNavegarAnalitica: () -> Unit = {},
+    onNavegarEquipo: () -> Unit = {},
     onNavegarPerfil: () -> Unit = {},
     onEscanearBoleta: () -> Unit = {},
     viewModel: MenuPrincipalViewmodel = viewModel()
@@ -50,8 +51,8 @@ fun MenuPrincipalScreen(
     var mostrarDialogoCierre by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val colorTarjetaFondo = Color(0xFFEBF3F0)
-    val verdeResaltado = Color(0xFF0F5961)
+    val colorTarjetaFondo = if (modoOscuro) Color(0xFF163E45) else Color(0xFFEBF3F0)
+    val verdeResaltado = if (modoOscuro) Color(0xFF2AAEA4) else Color(0xFF0F5961)
 
     LaunchedEffect(state.mensajeInformativo) {
         state.mensajeInformativo?.let { mensaje ->
@@ -63,8 +64,8 @@ fun MenuPrincipalScreen(
     if (mostrarDialogoCierre) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoCierre = false },
-            title = { Text("Confirmar Cierre Diario") },
-            text = { Text("¿Deseas ejecutar el Cierre Diario? Todos los visitantes actualmente 'En_Tienda' cambiarán a 'No_Compro', dejando el contador en 0.") },
+            title = { Text("Confirmar Cierre Diario", color = if (modoOscuro) Color.White else Color.Unspecified) },
+            text = { Text("¿Deseas ejecutar el Cierre Diario? Todos los visitantes actualmente 'En_Tienda' cambiarán a 'No_Compro', dejando el contador en 0.", color = if (modoOscuro) Color(0xFFB9CACB) else Color.Unspecified) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -73,12 +74,12 @@ fun MenuPrincipalScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = verdeResaltado)
                 ) {
-                    Text("Ejecutar Cierre")
+                    Text("Ejecutar Cierre", color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { mostrarDialogoCierre = false }) {
-                    Text("Cancelar")
+                    Text("Cancelar", color = verdeResaltado)
                 }
             }
         )
@@ -94,9 +95,11 @@ fun MenuPrincipalScreen(
                         DestinoBarra.INICIO -> {}
                         DestinoBarra.SESIONES -> onNavegarSesiones()
                         DestinoBarra.ANALITICA -> onNavegarAnalitica()
+                        DestinoBarra.EQUIPO -> onNavegarEquipo()
                         DestinoBarra.PERFIL -> onNavegarPerfil()
                     }
-                }
+                },
+                modoOscuro = modoOscuro
             )
         }
     ) { paddingValues ->
@@ -121,17 +124,29 @@ fun MenuPrincipalScreen(
                         Text(
                             text = "MARTES, 15 DE SEPTIEMBRE",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.Gray,
+                            color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Surface(
-                            color = if (state.rolUsuario == RolUsuario.SUPERVISOR) Color(0xFFF3E0D1) else Color(0xFFD4ECE2),
+                            color = when (state.rolUsuario) {
+                                RolUsuario.ADMIN -> if (modoOscuro) Color(0xFF1F4E8C) else Color(0xFFD6E4F5)
+                                RolUsuario.SUPERVISOR -> if (modoOscuro) Color(0xFF4B3525) else Color(0xFFF3E0D1)
+                                RolUsuario.OBSERVADOR -> if (modoOscuro) Color(0xFF173E35) else Color(0xFFD4ECE2)
+                            },
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(
-                                text = if (state.rolUsuario == RolUsuario.SUPERVISOR) "Supervisor" else "Observador",
-                                color = if (state.rolUsuario == RolUsuario.SUPERVISOR) Color(0xFFB85D19) else Color(0xFF1E7550),
+                                text = when (state.rolUsuario) {
+                                    RolUsuario.ADMIN -> "Administrador"
+                                    RolUsuario.SUPERVISOR -> "Supervisor"
+                                    RolUsuario.OBSERVADOR -> "Observador"
+                                },
+                                color = when (state.rolUsuario) {
+                                    RolUsuario.ADMIN -> if (modoOscuro) Color.White else Color(0xFF1F4E8C)
+                                    RolUsuario.SUPERVISOR -> if (modoOscuro) Color(0xFFF0A66D) else Color(0xFFB85D19)
+                                    RolUsuario.OBSERVADOR -> if (modoOscuro) Color(0xFF69C392) else Color(0xFF1E7550)
+                                },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -148,25 +163,12 @@ fun MenuPrincipalScreen(
                         Text(
                             text = state.correoUsuario,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
+                            color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray
                         )
                     }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(
-                        onClick = { },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(if (modoOscuro) Color(0xFF163E45) else Color.White)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Notifications,
-                            contentDescription = "Notificaciones",
-                            tint = if (modoOscuro) Color.White else verdeResaltado
-                        )
-                    }
                     IconButton(
                         onClick = onCambiarTema,
                         modifier = Modifier
@@ -190,12 +192,14 @@ fun MenuPrincipalScreen(
                 value = state.busqueda,
                 onValueChange = { viewModel.actualizarBusqueda(it) },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Buscar acceso o sesión", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.Gray) },
+                placeholder = { Text("Buscar acceso o sesión", color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray) },
+                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray) },
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = if (modoOscuro) Color(0xFF163E45) else Color.White,
+                    unfocusedContainerColor = if (modoOscuro) Color(0xFF163E45) else Color.White,
+                    focusedTextColor = if (modoOscuro) Color.White else Color(0xFF1E2D31),
+                    unfocusedTextColor = if (modoOscuro) Color.White else Color(0xFF1E2D31),
                     focusedBorderColor = Color.Transparent,
                     unfocusedBorderColor = Color.Transparent
                 ),
@@ -215,13 +219,15 @@ fun MenuPrincipalScreen(
                     onRegistrarSalida = { viewModel.registrarSalidaSinCompra() },
                     onEjecutarCierre = { mostrarDialogoCierre = true },
                     onEscanearBoleta = onEscanearBoleta,
-                    onFinalizarSesion = { viewModel.finalizarSesionEntrada() }
+                    onFinalizarSesion = { viewModel.finalizarSesionEntrada() },
+                    modoOscuro = modoOscuro
                 )
             } else {
                 TarjetaSinSesionActiva(
                     colorFondoContenedor = colorTarjetaFondo,
                     verdeResaltado = verdeResaltado,
-                    onIrASesiones = onNavegarSesiones
+                    onIrASesiones = onNavegarSesiones,
+                    modoOscuro = modoOscuro
                 )
             }
 
@@ -242,7 +248,7 @@ fun MenuPrincipalScreen(
                 Tab(
                     selected = state.tabSeleccionada == 1,
                     onClick = { viewModel.seleccionarTab(1) },
-                    text = { Text("Próximas", fontWeight = FontWeight.Bold, color = Color.Gray) }
+                    text = { Text("Próximas", fontWeight = FontWeight.Bold, color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray) }
                 )
             }
 
@@ -285,7 +291,8 @@ fun MenuPrincipalScreen(
                         TarjetaSesionMenu(
                             sesion = sesion,
                             onCheckedChange = { viewModel.alternarCompletado(sesion.id) },
-                            onClickDetalle = { }
+                            onClickDetalle = { },
+                            modoOscuro = modoOscuro
                         )
                     }
                 }
@@ -300,7 +307,8 @@ fun MenuPrincipalScreen(
                 textoMeta = state.textoMeta,
                 zonasFlujo = state.zonasFlujo,
                 colorFondoContenedor = colorTarjetaFondo,
-                verdeResaltado = verdeResaltado
+                verdeResaltado = verdeResaltado,
+                modoOscuro = modoOscuro
             )
 
             Spacer(modifier = Modifier.height(24.dp))

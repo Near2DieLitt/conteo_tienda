@@ -118,7 +118,8 @@ fun AnaliticaScreen(
         bottomBar = {
             BarraNavegacionInferior(
                 seleccionado = DestinoBarra.ANALITICA,
-                onNavegar = onNavegar
+                onNavegar = onNavegar,
+                modoOscuro = modoOscuro
             )
         }
     ) { paddingValues ->
@@ -138,26 +139,26 @@ fun AnaliticaScreen(
                     Text(
                         text = stringResource(id = R.string.rotulo_rincon_sur),
                         style = MaterialTheme.typography.labelSmall,
-                        color = TextoSecundario,
+                        color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario,
                         letterSpacing = 2.sp
                     )
                     Text(
                         text = "Analítica",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Petroleo800
+                        color = if (modoOscuro) Color.White else Petroleo800
                     )
                 }
                 IconButton(
                     onClick = onCambiarTema,
                     modifier = Modifier
-                        .background(Superficie, CircleShape)
+                        .background(if (modoOscuro) Color(0xFF163E45) else Superficie, CircleShape)
                         .size(48.dp)
                 ) {
                     Icon(
                         imageVector = if (modoOscuro) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
                         contentDescription = stringResource(id = R.string.desc_cambiar_tema),
-                        tint = Petroleo800
+                        tint = if (modoOscuro) Color.White else Petroleo800
                     )
                 }
             }
@@ -175,6 +176,7 @@ fun AnaliticaScreen(
                     onSeleccion = { i ->
                         if (i == 2) mostrarRango = true else viewModel.seleccionarPeriodo(i)
                     },
+                    modoOscuro = modoOscuro,
                     modifier = Modifier.weight(1f)
                 )
                 SelectorCampo(
@@ -184,6 +186,7 @@ fun AnaliticaScreen(
                     onSeleccion = { i ->
                         viewModel.seleccionarAcceso(if (i == 0) null else Accesos.lista[i - 1])
                     },
+                    modoOscuro = modoOscuro,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -191,7 +194,7 @@ fun AnaliticaScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = Turquesa100),
+                colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF163E45) else Turquesa100),
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -201,18 +204,18 @@ fun AnaliticaScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Superficie),
+                                .background(if (modoOscuro) Color(0xFF1D4950) else Superficie),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Outlined.BarChart, contentDescription = null, tint = Petroleo800)
+                            Icon(Icons.Outlined.BarChart, contentDescription = null, tint = if (modoOscuro) Color.White else Petroleo800)
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(tituloResumen, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Petroleo800)
+                            Text(tituloResumen, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800)
                             Text(
                                 text = "${fmtFechaCorta(state.rangoDesde)} – ${fmtFechaCorta(state.rangoHasta)}",
                                 fontSize = 10.sp,
-                                color = TextoSecundario
+                                color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario
                             )
                         }
                         Box {
@@ -220,7 +223,7 @@ fun AnaliticaScreen(
                                 Icon(
                                     Icons.Outlined.MoreHoriz,
                                     contentDescription = "Opciones",
-                                    tint = TextoSecundario.copy(alpha = if (puedeEditar) 1f else 0.4f)
+                                    tint = (if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario).copy(alpha = if (puedeEditar) 1f else 0.4f)
                                 )
                             }
                             DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
@@ -250,7 +253,7 @@ fun AnaliticaScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = Superficie),
+                        colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF1D4950) else Superficie),
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -262,16 +265,17 @@ fun AnaliticaScreen(
                         ) {
                             MedidorSemicircular(
                                 porcentajeTransito = resumen.porcentajeTransito,
-                                totalTexto = fmtNumero(resumen.ingresos)
+                                totalTexto = fmtNumero(resumen.ingresos),
+                                modoOscuro = modoOscuro
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(
                                 modifier = Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                FilaLeyenda(ColorSinTransito, "Flujo total", fmtNumero(resumen.ingresos))
-                                FilaLeyenda(ColorTransito, "Tránsito", fmtPorc(resumen.porcentajeTransito))
-                                FilaLeyenda(Exito, "Conversión", fmtPorc(resumen.porcentajeConversion))
+                                FilaLeyenda(if (modoOscuro) Color(0xFF2AAEA4) else ColorSinTransito, "Flujo total", fmtNumero(resumen.ingresos), modoOscuro = modoOscuro)
+                                FilaLeyenda(if (modoOscuro) AdvertenciaOscura else ColorTransito, "Tránsito", fmtPorc(resumen.porcentajeTransito), modoOscuro = modoOscuro)
+                                FilaLeyenda(if (modoOscuro) ExitoOscuro else Exito, "Conversión", fmtPorc(resumen.porcentajeConversion), modoOscuro = modoOscuro)
                             }
                         }
                     }
@@ -281,7 +285,7 @@ fun AnaliticaScreen(
                         Text(
                             text = "Aún no hay conteos en este período.",
                             fontSize = 11.sp,
-                            color = TextoSecundario
+                            color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario
                         )
                     }
                 }
@@ -290,7 +294,7 @@ fun AnaliticaScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = FondoBeige),
+                colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF1D4950) else FondoBeige),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -304,20 +308,23 @@ fun AnaliticaScreen(
                         icono = Icons.Outlined.TrendingUp,
                         valor = state.crecimiento?.let { String.format(localeCl, "%+.0f%%", it) } ?: "—",
                         etiqueta = "Crecimiento",
+                        modoOscuro = modoOscuro,
                         modifier = Modifier.weight(1f)
                     )
-                    DivisorVertical()
+                    DivisorVertical(modoOscuro = modoOscuro)
                     Estadistica(
                         icono = Icons.Outlined.Schedule,
                         valor = state.duracionPromedioMin?.let { "$it min" } ?: "—",
                         etiqueta = "Promedio",
+                        modoOscuro = modoOscuro,
                         modifier = Modifier.weight(1f)
                     )
-                    DivisorVertical()
+                    DivisorVertical(modoOscuro = modoOscuro)
                     Estadistica(
                         icono = Icons.Outlined.CalendarToday,
                         valor = state.cantidadSesiones.toString(),
                         etiqueta = "Sesiones",
+                        modoOscuro = modoOscuro,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -332,27 +339,28 @@ fun AnaliticaScreen(
                         text = "ACTIVIDAD",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Ambar600,
+                        color = if (modoOscuro) AdvertenciaOscura else Ambar600,
                         letterSpacing = 1.sp
                     )
                     Text(
                         text = "Flujo por acceso",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Petroleo800
+                        color = if (modoOscuro) Color.White else Petroleo800
                     )
                 }
                 SelectorCompacto(
                     valor = nombresModo[state.modoComparar],
                     opciones = nombresModo,
-                    onSeleccion = { viewModel.seleccionarModo(it) }
+                    onSeleccion = { viewModel.seleccionarModo(it) },
+                    modoOscuro = modoOscuro
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = FondoGrafico),
+                colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF163E45) else FondoGrafico),
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -360,10 +368,11 @@ fun AnaliticaScreen(
                     GraficoBarras(
                         porAcceso = state.porAcceso,
                         modo = state.modoComparar,
-                        accesoSeleccionado = state.acceso
+                        accesoSeleccionado = state.acceso,
+                        modoOscuro = modoOscuro
                     )
                     HorizontalDivider(
-                        color = TextoSecundario.copy(alpha = 0.25f),
+                        color = (if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario).copy(alpha = 0.25f),
                         modifier = Modifier.padding(vertical = 12.dp)
                     )
                     Row(
@@ -373,12 +382,12 @@ fun AnaliticaScreen(
                     ) {
                         when (state.modoComparar) {
                             0 -> {
-                                LeyendaPunto(ColorTransito, "Tránsito estimado")
+                                LeyendaPunto(if (modoOscuro) AdvertenciaOscura else ColorTransito, "Tránsito estimado", modoOscuro = modoOscuro)
                                 Spacer(modifier = Modifier.width(16.dp))
-                                LeyendaPunto(ColorSinTransito, "Flujo sin tránsito")
+                                LeyendaPunto(if (modoOscuro) Color(0xFF2AAEA4) else ColorSinTransito, "Flujo sin tránsito", modoOscuro = modoOscuro)
                             }
-                            1 -> LeyendaPunto(ColorTransito, "Tránsito estimado")
-                            else -> LeyendaPunto(ColorSinTransito, "Compradores")
+                            1 -> LeyendaPunto(if (modoOscuro) AdvertenciaOscura else ColorTransito, "Tránsito estimado", modoOscuro = modoOscuro)
+                            else -> LeyendaPunto(if (modoOscuro) Color(0xFF2AAEA4) else ColorSinTransito, "Compradores", modoOscuro = modoOscuro)
                         }
                     }
                 }
@@ -387,7 +396,7 @@ fun AnaliticaScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = Superficie),
+                colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF163E45) else Superficie),
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -396,22 +405,22 @@ fun AnaliticaScreen(
                         text = "Perfil de quien transita",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Petroleo800
+                        color = if (modoOscuro) Color.White else Petroleo800
                     )
                     Text(
                         text = "Rango etario · ${fmtNumero(resumen.transito)} personas sin compra",
                         fontSize = 11.sp,
-                        color = TextoSecundario
+                        color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     if (resumen.transito == 0) {
-                        Text("Sin datos de tránsito en este período.", fontSize = 12.sp, color = TextoSecundario)
+                        Text("Sin datos de tránsito en este período.", fontSize = 12.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
                     } else {
-                        FilaSegmento("Hasta 29 años", resumen.transitoJoven, resumen.transito, ColorTransito)
+                        FilaSegmento("Hasta 29 años", resumen.transitoJoven, resumen.transito, if (modoOscuro) AdvertenciaOscura else ColorTransito, modoOscuro = modoOscuro)
                         Spacer(modifier = Modifier.height(10.dp))
-                        FilaSegmento("30 a 49 años", resumen.transitoAdulto, resumen.transito, ColorSinTransito)
+                        FilaSegmento("30 a 49 años", resumen.transitoAdulto, resumen.transito, if (modoOscuro) Color(0xFF2AAEA4) else ColorSinTransito, modoOscuro = modoOscuro)
                         Spacer(modifier = Modifier.height(10.dp))
-                        FilaSegmento("50 años o más", resumen.transitoMayor, resumen.transito, Petroleo800)
+                        FilaSegmento("50 años o más", resumen.transitoMayor, resumen.transito, if (modoOscuro) Color.White else Petroleo800, modoOscuro = modoOscuro)
                     }
                 }
             }
@@ -419,7 +428,7 @@ fun AnaliticaScreen(
             if (state.registros.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Superficie),
+                    colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF163E45) else Superficie),
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -428,16 +437,17 @@ fun AnaliticaScreen(
                             text = "Últimos registros",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Petroleo800
+                            color = if (modoOscuro) Color.White else Petroleo800
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         state.registros.forEachIndexed { i, registro ->
                             if (i > 0) {
-                                HorizontalDivider(color = FondoAplicacion)
+                                HorizontalDivider(color = if (modoOscuro) Color(0xFF254A50) else FondoAplicacion)
                             }
                             FilaRegistro(
                                 registro = registro,
                                 puedeEditar = puedeEditar,
+                                modoOscuro = modoOscuro,
                                 onCambiarActivo = { activo ->
                                     viewModel.cambiarActivoRegistro(registro.id, activo)
                                     Toast.makeText(
@@ -464,13 +474,14 @@ private fun SelectorCampo(
     valor: String,
     opciones: List<String>,
     onSeleccion: (Int) -> Unit,
+    modoOscuro: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var abierto by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = Superficie),
+            colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF163E45) else Superficie),
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
@@ -482,10 +493,10 @@ private fun SelectorCampo(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(etiqueta, fontSize = 10.sp, color = TextoSecundario)
-                    Text(valor, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Petroleo800)
+                    Text(etiqueta, fontSize = 10.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
+                    Text(valor, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800)
                 }
-                Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null, tint = Petroleo800)
+                Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null, tint = if (modoOscuro) Color.White else Petroleo800)
             }
         }
         DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
@@ -506,7 +517,8 @@ private fun SelectorCampo(
 private fun SelectorCompacto(
     valor: String,
     opciones: List<String>,
-    onSeleccion: (Int) -> Unit
+    onSeleccion: (Int) -> Unit,
+    modoOscuro: Boolean = false
 ) {
     var abierto by remember { mutableStateOf(false) }
 
@@ -514,17 +526,17 @@ private fun SelectorCompacto(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(Superficie)
+                .background(if (modoOscuro) Color(0xFF1D4950) else Superficie)
                 .clickable { abierto = true }
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(valor, fontSize = 11.sp, color = Petroleo800)
+            Text(valor, fontSize = 11.sp, color = if (modoOscuro) Color.White else Petroleo800)
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 Icons.Outlined.KeyboardArrowDown,
                 contentDescription = null,
-                tint = Petroleo800,
+                tint = if (modoOscuro) Color.White else Petroleo800,
                 modifier = Modifier.size(14.dp)
             )
         }
@@ -543,7 +555,7 @@ private fun SelectorCompacto(
 }
 
 @Composable
-private fun MedidorSemicircular(porcentajeTransito: Float, totalTexto: String) {
+private fun MedidorSemicircular(porcentajeTransito: Float, totalTexto: String, modoOscuro: Boolean = false) {
     val barridoAnimado by animateFloatAsState(
         targetValue = (porcentajeTransito / 100f).coerceIn(0f, 1f) * 180f,
         animationSpec = tween(800),
@@ -563,7 +575,7 @@ private fun MedidorSemicircular(porcentajeTransito: Float, totalTexto: String) {
             val area = Size(diametro, diametro)
 
             drawArc(
-                color = Color(0xFFE5ECE9),
+                color = if (modoOscuro) Color(0xFF31575D) else Color(0xFFE5ECE9),
                 startAngle = 180f,
                 sweepAngle = 180f,
                 useCenter = false,
@@ -572,7 +584,7 @@ private fun MedidorSemicircular(porcentajeTransito: Float, totalTexto: String) {
                 style = Stroke(width = grosor)
             )
             drawArc(
-                color = ColorTransito,
+                color = if (modoOscuro) AdvertenciaOscura else ColorTransito,
                 startAngle = 360f - barridoAnimado,
                 sweepAngle = barridoAnimado,
                 useCenter = false,
@@ -582,14 +594,14 @@ private fun MedidorSemicircular(porcentajeTransito: Float, totalTexto: String) {
             )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(totalTexto, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Petroleo800)
-            Text("personas", fontSize = 9.sp, color = TextoSecundario)
+            Text(totalTexto, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800)
+            Text("personas", fontSize = 9.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
         }
     }
 }
 
 @Composable
-private fun FilaLeyenda(color: Color, etiqueta: String, valor: String) {
+private fun FilaLeyenda(color: Color, etiqueta: String, valor: String, modoOscuro: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
@@ -598,13 +610,13 @@ private fun FilaLeyenda(color: Color, etiqueta: String, valor: String) {
                 .background(color)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(etiqueta, fontSize = 11.sp, color = TextoSecundario, modifier = Modifier.weight(1f))
-        Text(valor, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Petroleo800)
+        Text(etiqueta, fontSize = 11.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario, modifier = Modifier.weight(1f))
+        Text(valor, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800)
     }
 }
 
 @Composable
-private fun LeyendaPunto(color: Color, texto: String) {
+private fun LeyendaPunto(color: Color, texto: String, modoOscuro: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
@@ -613,27 +625,27 @@ private fun LeyendaPunto(color: Color, texto: String) {
                 .background(color)
         )
         Spacer(modifier = Modifier.width(6.dp))
-        Text(texto, fontSize = 10.sp, color = TextoSecundario)
+        Text(texto, fontSize = 10.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
     }
 }
 
 @Composable
-private fun Estadistica(icono: ImageVector, valor: String, etiqueta: String, modifier: Modifier = Modifier) {
+private fun Estadistica(icono: ImageVector, valor: String, etiqueta: String, modoOscuro: Boolean = false, modifier: Modifier = Modifier) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icono, contentDescription = null, tint = Ambar600, modifier = Modifier.size(18.dp))
+        Icon(icono, contentDescription = null, tint = if (modoOscuro) AdvertenciaOscura else Ambar600, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.height(4.dp))
-        Text(valor, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Petroleo800)
-        Text(etiqueta, fontSize = 10.sp, color = TextoSecundario)
+        Text(valor, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800)
+        Text(etiqueta, fontSize = 10.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
     }
 }
 
 @Composable
-private fun DivisorVertical() {
+private fun DivisorVertical(modoOscuro: Boolean = false) {
     Box(
         modifier = Modifier
             .width(1.dp)
             .height(44.dp)
-            .background(TextoSecundario.copy(alpha = 0.25f))
+            .background((if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario).copy(alpha = 0.25f))
     )
 }
 
@@ -641,7 +653,8 @@ private fun DivisorVertical() {
 private fun GraficoBarras(
     porAcceso: Map<String, ResumenFlujo>,
     modo: Int,
-    accesoSeleccionado: String?
+    accesoSeleccionado: String?,
+    modoOscuro: Boolean = false
 ) {
     fun valorDe(r: ResumenFlujo): Int = when (modo) {
         1 -> r.transito
@@ -661,6 +674,7 @@ private fun GraficoBarras(
                 modo = modo,
                 maximo = maximo,
                 resaltada = accesoSeleccionado == null || accesoSeleccionado == acceso,
+                modoOscuro = modoOscuro,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -674,6 +688,7 @@ private fun BarraAcceso(
     modo: Int,
     maximo: Int,
     resaltada: Boolean,
+    modoOscuro: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val valor = when (modo) {
@@ -696,14 +711,14 @@ private fun BarraAcceso(
         modifier = modifier.alpha(opacidad),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(fmtNumero(valor), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Petroleo800)
+        Text(fmtNumero(valor), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800)
         Spacer(modifier = Modifier.height(8.dp))
         Box(
             modifier = Modifier
                 .width(26.dp)
                 .height(150.dp)
                 .clip(RoundedCornerShape(13.dp))
-                .background(Color(0xFFF7F9F6)),
+                .background(if (modoOscuro) Color(0xFF1D4950) else Color(0xFFF7F9F6)),
             contentAlignment = Alignment.BottomCenter
         ) {
             Column(
@@ -712,9 +727,12 @@ private fun BarraAcceso(
                     .fillMaxHeight(fraccion.coerceIn(0f, 1f))
                     .clip(RoundedCornerShape(13.dp))
             ) {
+                val colorTransitoUso = if (modoOscuro) AdvertenciaOscura else ColorTransito
+                val colorSinTransitoUso = if (modoOscuro) Color(0xFF2AAEA4) else ColorSinTransito
+
                 when (modo) {
-                    1 -> Box(modifier = Modifier.fillMaxSize().background(ColorTransito))
-                    2 -> Box(modifier = Modifier.fillMaxSize().background(ColorSinTransito))
+                    1 -> Box(modifier = Modifier.fillMaxSize().background(colorTransitoUso))
+                    2 -> Box(modifier = Modifier.fillMaxSize().background(colorSinTransitoUso))
                     else -> {
                         val sinTransito = (datos.ingresos - datos.transito).coerceAtLeast(0)
                         if (sinTransito > 0) {
@@ -722,7 +740,7 @@ private fun BarraAcceso(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(sinTransito.toFloat())
-                                    .background(ColorSinTransito)
+                                    .background(colorSinTransitoUso)
                             )
                         }
                         if (datos.transito > 0) {
@@ -730,7 +748,7 @@ private fun BarraAcceso(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(datos.transito.toFloat())
-                                    .background(ColorTransito)
+                                    .background(colorTransitoUso)
                             )
                         }
                     }
@@ -738,13 +756,13 @@ private fun BarraAcceso(
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(acceso, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorSinTransito)
-        Text(Accesos.nombre(acceso), fontSize = 8.sp, color = TextoSecundario, maxLines = 1)
+        Text(acceso, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color(0xFF2AAEA4) else ColorSinTransito)
+        Text(Accesos.nombre(acceso), fontSize = 8.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario, maxLines = 1)
     }
 }
 
 @Composable
-private fun FilaSegmento(etiqueta: String, cantidad: Int, total: Int, color: Color) {
+private fun FilaSegmento(etiqueta: String, cantidad: Int, total: Int, color: Color, modoOscuro: Boolean = false) {
     val porcentaje = if (total == 0) 0f else cantidad * 100f / total
     val fraccion by animateFloatAsState(
         targetValue = porcentaje / 100f,
@@ -754,12 +772,12 @@ private fun FilaSegmento(etiqueta: String, cantidad: Int, total: Int, color: Col
 
     Column {
         Row(modifier = Modifier.fillMaxWidth()) {
-            Text(etiqueta, fontSize = 12.sp, color = Petroleo800, modifier = Modifier.weight(1f))
+            Text(etiqueta, fontSize = 12.sp, color = if (modoOscuro) Color.White else Petroleo800, modifier = Modifier.weight(1f))
             Text(
                 text = "${fmtNumero(cantidad)} · ${fmtPorc(porcentaje)}",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Petroleo800
+                color = if (modoOscuro) Color.White else Petroleo800
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
@@ -768,7 +786,7 @@ private fun FilaSegmento(etiqueta: String, cantidad: Int, total: Int, color: Col
                 .fillMaxWidth()
                 .height(8.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(FondoAplicacion)
+                .background(if (modoOscuro) Color(0xFF1D4950) else FondoAplicacion)
         ) {
             Box(
                 modifier = Modifier
@@ -784,6 +802,7 @@ private fun FilaSegmento(etiqueta: String, cantidad: Int, total: Int, color: Col
 private fun FilaRegistro(
     registro: RegistroFlujo,
     puedeEditar: Boolean,
+    modoOscuro: Boolean = false,
     onCambiarActivo: (Boolean) -> Unit
 ) {
     Row(
@@ -797,7 +816,7 @@ private fun FilaRegistro(
             modifier = Modifier
                 .size(28.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Petroleo800),
+                .background(if (modoOscuro) Color(0xFF0F5961) else Petroleo800),
             contentAlignment = Alignment.Center
         ) {
             Text(registro.acceso, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -808,12 +827,12 @@ private fun FilaRegistro(
                 text = "${fmtFechaCorta(registro.fecha)} · ${fmtNumero(registro.ingresos)} ingresos",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Petroleo800
+                color = if (modoOscuro) Color.White else Petroleo800
             )
             Text(
                 text = "Tránsito ${fmtNumero(registro.transito)} · Compradores ${fmtNumero(registro.compradores)}",
                 fontSize = 11.sp,
-                color = TextoSecundario
+                color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario
             )
             if (!registro.activo) {
                 Text("Deshabilitado", fontSize = 10.sp, color = Error)
@@ -827,7 +846,7 @@ private fun FilaRegistro(
             Icon(
                 imageVector = if (registro.activo) Icons.Outlined.Block else Icons.Outlined.Restore,
                 contentDescription = if (registro.activo) "Deshabilitar registro" else "Habilitar registro",
-                tint = TextoSecundario.copy(alpha = if (puedeEditar) 1f else 0.4f),
+                tint = (if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario).copy(alpha = if (puedeEditar) 1f else 0.4f),
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -854,10 +873,10 @@ private fun DialogoRangoFechas(
                         onAplicar(millisAFecha(inicio), millisAFecha(fin ?: inicio))
                     }
                 }
-            ) { Text("Aplicar", color = Petroleo800) }
+            ) { Text("Aplicar") }
         },
         dismissButton = {
-            TextButton(onClick = onCancelar) { Text("Cancelar", color = Petroleo800) }
+            TextButton(onClick = onCancelar) { Text("Cancelar") }
         }
     ) {
         DateRangePicker(state = estado, modifier = Modifier.height(500.dp))
@@ -882,10 +901,10 @@ private fun DialogoRegistroFlujo(
                 TextButton(onClick = {
                     estadoFecha.selectedDateMillis?.let { onCambio("fecha", millisAFecha(it)) }
                     mostrarFecha = false
-                }) { Text("Aceptar", color = Petroleo800) }
+                }) { Text("Aceptar") }
             },
             dismissButton = {
-                TextButton(onClick = { mostrarFecha = false }) { Text("Cancelar", color = Petroleo800) }
+                TextButton(onClick = { mostrarFecha = false }) { Text("Cancelar") }
             }
         ) {
             DatePicker(state = estadoFecha)
@@ -894,7 +913,7 @@ private fun DialogoRegistroFlujo(
 
     AlertDialog(
         onDismissRequest = onCancelar,
-        title = { Text("Registrar conteo", fontWeight = FontWeight.Bold, color = Petroleo800) },
+        title = { Text("Registrar conteo", fontWeight = FontWeight.Bold) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -951,7 +970,7 @@ private fun DialogoRegistroFlujo(
                     onCambio = { onCambio("compradores", it) }
                 )
 
-                Text("Tránsito sin compra, por edad", fontSize = 12.sp, color = TextoSecundario)
+                Text("Tránsito sin compra, por edad", fontSize = 12.sp)
 
                 CampoNumero(
                     valor = form.transitoJoven,
@@ -991,12 +1010,11 @@ private fun DialogoRegistroFlujo(
         },
         confirmButton = {
             Button(
-                onClick = onGuardar,
-                colors = ButtonDefaults.buttonColors(containerColor = Petroleo800)
+                onClick = onGuardar
             ) { Text("Guardar") }
         },
         dismissButton = {
-            TextButton(onClick = onCancelar) { Text("Cancelar", color = Petroleo800) }
+            TextButton(onClick = onCancelar) { Text("Cancelar") }
         }
     )
 }

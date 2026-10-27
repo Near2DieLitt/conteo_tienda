@@ -34,6 +34,7 @@ fun TarjetaVisitantesTienda(
     onEjecutarCierre: () -> Unit,
     onEscanearBoleta: () -> Unit,
     onFinalizarSesion: () -> Unit,
+    modoOscuro: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var rangoSeleccionado by remember { mutableStateOf(RangoEtario.ADULTO) }
@@ -66,7 +67,7 @@ fun TarjetaVisitantesTienda(
                 ) {
                     Text(
                         text = "Tiempo Real",
-                        color = Color(0xFF1E7550),
+                        color = if (modoOscuro) Color(0xFF69C392) else Color(0xFF1E7550),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -78,7 +79,7 @@ fun TarjetaVisitantesTienda(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF1D4950) else Color.White),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
@@ -108,7 +109,7 @@ fun TarjetaVisitantesTienda(
                             onClick = onFinalizarSesion,
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                         ) {
-                            Text("Finalizar", color = Color(0xFFB85D19), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Finalizar", color = if (modoOscuro) Color(0xFFF0A66D) else Color(0xFFB85D19), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -123,7 +124,7 @@ fun TarjetaVisitantesTienda(
                             Text(
                                 text = "Estado: En_Tienda",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Color.Gray
+                                color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray
                             )
                             Text(
                                 text = "${resumen.enTienda}",
@@ -134,7 +135,7 @@ fun TarjetaVisitantesTienda(
                             Text(
                                 text = "visitante(s) activo(s)",
                                 fontSize = 12.sp,
-                                color = Color.Gray
+                                color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray
                             )
                         }
 
@@ -143,9 +144,9 @@ fun TarjetaVisitantesTienda(
                             colors = ButtonDefaults.buttonColors(containerColor = verdeResaltado),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Icon(Icons.Outlined.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Outlined.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Boleta", fontSize = 13.sp)
+                            Text("Boleta", fontSize = 13.sp, color = Color.White)
                         }
                     }
 
@@ -155,27 +156,27 @@ fun TarjetaVisitantesTienda(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFF4F7F6))
+                            .background(if (modoOscuro) Color(0xFF163E45) else Color(0xFFF4F7F6))
                             .padding(10.dp),
                         horizontalArrangement = Arrangement.SpaceAround
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Compró", fontSize = 11.sp, color = Color.Gray)
-                            Text("${resumen.compro}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E7550))
+                            Text("Compró", fontSize = 11.sp, color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray)
+                            Text("${resumen.compro}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color(0xFF69C392) else Color(0xFF1E7550))
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("No Compró", fontSize = 11.sp, color = Color.Gray)
-                            Text("${resumen.noCompro}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB85D19))
+                            Text("No Compró", fontSize = 11.sp, color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray)
+                            Text("${resumen.noCompro}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color(0xFFF0A66D) else Color(0xFFB85D19))
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Total Hoy", fontSize = 11.sp, color = Color.Gray)
+                            Text("Total Hoy", fontSize = 11.sp, color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray)
                             Text("${resumen.total}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = verdeResaltado)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    Text("Rango etario del visitante:", fontSize = 11.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
+                    Text("Rango etario del visitante:", fontSize = 11.sp, color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray, fontWeight = FontWeight.Medium)
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Row(
@@ -196,7 +197,9 @@ fun TarjetaVisitantesTienda(
                                 modifier = Modifier.weight(1f),
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = verdeResaltado,
-                                    selectedLabelColor = Color.White
+                                    selectedLabelColor = Color.White,
+                                    containerColor = if (modoOscuro) Color(0xFF163E45) else Color.Transparent,
+                                    labelColor = if (modoOscuro) Color(0xFFB9CACB) else Color.Unspecified
                                 )
                             )
                         }
@@ -211,7 +214,8 @@ fun TarjetaVisitantesTienda(
                         OutlinedButton(
                             onClick = { onRegistrarEntrada(rangoSeleccionado) },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp)
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = verdeResaltado)
                         ) {
                             Icon(Icons.Outlined.PersonAdd, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -221,7 +225,8 @@ fun TarjetaVisitantesTienda(
                         OutlinedButton(
                             onClick = onRegistrarSalida,
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp)
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = verdeResaltado)
                         ) {
                             Icon(Icons.Outlined.PersonRemove, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -235,7 +240,7 @@ fun TarjetaVisitantesTienda(
                         onClick = onEjecutarCierre,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFB85D19))
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = if (modoOscuro) Color(0xFFF0A66D) else Color(0xFFB85D19))
                     ) {
                         Icon(Icons.Outlined.LockClock, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))

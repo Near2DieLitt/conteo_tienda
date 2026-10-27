@@ -8,5 +8,8 @@ data class Usuario(
     val passwordHash: String,
     val rol: RolUsuario,
     val avatar: ByteArray? = null,
-    val descripcion: String? = null
+    val descripcion: String? = null,
+    val rut: String = "",
+    val perfil: String = Perfiles.OBSERVADOR.codigo,
+    val activo: Boolean = true
 )

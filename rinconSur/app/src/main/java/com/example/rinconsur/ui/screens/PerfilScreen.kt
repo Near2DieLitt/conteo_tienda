@@ -108,8 +108,8 @@ fun PerfilScreen(
     if (mostrarOpcionesFoto){
         AlertDialog(
             onDismissRequest = { mostrarOpcionesFoto = false},
-            title = {Text("Cambiar foto de perfil")},
-            text = { Text("Elige desde donde quieres seleccinar tu nueva foto")},
+            title = {Text("Cambiar foto de perfil", color = if (modoOscuro) Color.White else Color.Unspecified)},
+            text = { Text("Elige desde donde quieres seleccinar tu nueva foto", color = if (modoOscuro) Color(0xFFB9CACB) else Color.Unspecified)},
             confirmButton = {
                 TextButton(onClick = {
                     mostrarOpcionesFoto = false
@@ -121,7 +121,7 @@ fun PerfilScreen(
                         permissionLauncher.launch(Manifest.permission.CAMERA)
                     }
                 }){
-                    Text("Camara", color = Petroleo800)
+                    Text("Camara", color = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800)
                 }
             },
             dismissButton = {
@@ -129,7 +129,7 @@ fun PerfilScreen(
                     mostrarOpcionesFoto = false
                     pickGalleryLauncher.launch("image/*")
                 }) {
-                    Text("Galeria", color = Petroleo800)
+                    Text("Galeria", color = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800)
                 }
             }
         )
@@ -138,10 +138,10 @@ fun PerfilScreen(
     if (mostrarDialogoEditar) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoEditar = false },
-            title = { Text("Editar perfil", fontWeight = FontWeight.Bold, color = Petroleo800) },
+            title = { Text("Editar perfil", fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800) },
             text = {
                 Column {
-                    Text("Agrega una breve descripción o estado para tu perfil", color = TextoSecundario, fontSize = 14.sp)
+                    Text("Agrega una breve descripción o estado para tu perfil", color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = textoInputDescripcion,
@@ -163,14 +163,14 @@ fun PerfilScreen(
                             snackbarHostState.showSnackbar("Perfil actualizado correctamente")
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Petroleo800)
+                    colors = ButtonDefaults.buttonColors(containerColor = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800)
                 ) {
-                    Text("Guardar")
+                    Text("Guardar", color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { mostrarDialogoEditar = false }) {
-                    Text("Cancelar", color = Petroleo800)
+                    Text("Cancelar", color = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800)
                 }
             }
         )
@@ -198,13 +198,13 @@ fun PerfilScreen(
             IconButton(
                 onClick = onIrAInicio,
                 modifier = Modifier
-                    .background(Superficie, CircleShape)
+                    .background(if (modoOscuro) Color(0xFF163E45) else Superficie, CircleShape)
                     .size(48.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.ArrowBack,
                     contentDescription = "Volver al inicio",
-                    tint = Petroleo800
+                    tint = if (modoOscuro) Color.White else Petroleo800
                 )
             }
 
@@ -214,27 +214,27 @@ fun PerfilScreen(
                 Text(
                     text = stringResource(id = R.string.rotulo_rincon_sur),
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextoSecundario,
+                    color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario,
                     letterSpacing = 2.sp
                 )
                 Text(
                     text = stringResource(id = R.string.titulo_perfil),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Petroleo800
+                    color = if (modoOscuro) Color.White else Petroleo800
                 )
             }
 
             IconButton(
                 onClick = onCambiarTema,
                 modifier = Modifier
-                    .background(Superficie, CircleShape)
+                    .background(if (modoOscuro) Color(0xFF163E45) else Superficie, CircleShape)
                     .size(48.dp)
             ) {
                 Icon(
                     imageVector = if (modoOscuro) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
                     contentDescription = stringResource(id = R.string.desc_cambiar_tema),
-                    tint = Petroleo800
+                    tint = if (modoOscuro) Color.White else Petroleo800
                 )
             }
         }
@@ -242,7 +242,7 @@ fun PerfilScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Card(
-            colors = CardDefaults.cardColors(containerColor = Turquesa100),
+            colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF163E45) else Turquesa100),
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -251,7 +251,7 @@ fun PerfilScreen(
                     Box(
                         modifier = Modifier.size(76.dp)
                             .clip(CircleShape)
-                            .background(Petroleo800),
+                            .background(if (modoOscuro) Color(0xFF0F5961) else Petroleo800),
                         contentAlignment = Alignment.Center
                     ) {
                         if (state.fotoBitmap != null) {
@@ -272,7 +272,7 @@ fun PerfilScreen(
                         modifier = Modifier
                             .size(28.dp)
                             .clip(CircleShape)
-                            .background(Superficie)
+                            .background(if (modoOscuro) Color(0xFF1D4950) else Superficie)
                             .clickable { mostrarOpcionesFoto = true }
                             .padding(2.dp),
                         contentAlignment = Alignment.Center
@@ -281,7 +281,7 @@ fun PerfilScreen(
                             contentDescription = stringResource(
                                 id = R.string.desc_cambiar_foto
                             ),
-                            tint = Ambar600,
+                            tint = if (modoOscuro) AdvertenciaOscura else Ambar600,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -290,15 +290,15 @@ fun PerfilScreen(
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Column {
-                    Text(state.nombre, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Petroleo800)
-                    Text(state.cargo, fontSize = 12.sp, color = TextoSecundario)
+                    Text(state.nombre, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = if (modoOscuro) Color.White else Petroleo800)
+                    Text(state.cargo, fontSize = 12.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
 
                     if (state.descripcion.isNotBlank())  {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "\"${state.descripcion}\"",
                             fontSize = 13.sp,
-                            color = Petroleo800,
+                            color = if (modoOscuro) Color.White else Petroleo800,
                             fontStyle = FontStyle.Italic,
                             lineHeight = 16.sp
                         )
@@ -310,7 +310,7 @@ fun PerfilScreen(
                             textoInputDescripcion = state.descripcion
                             mostrarDialogoEditar = true
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Petroleo800),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.height(32.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
@@ -324,32 +324,32 @@ fun PerfilScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            EtiquetaPerfil(stringResource(id = R.string.etiqueta_supervision))
-            EtiquetaPerfil(stringResource(id = R.string.etiqueta_turno))
-            EtiquetaPerfil(stringResource(id = R.string.etiqueta_accesos))
+            EtiquetaPerfil(stringResource(id = R.string.etiqueta_supervision), modoOscuro = modoOscuro)
+            EtiquetaPerfil(stringResource(id = R.string.etiqueta_turno), modoOscuro = modoOscuro)
+            EtiquetaPerfil(stringResource(id = R.string.etiqueta_accesos), modoOscuro = modoOscuro)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        Text(stringResource(id = R.string.campo_operacion).uppercase(), style = MaterialTheme.typography.labelSmall, color = TextoSecundario, fontWeight = FontWeight.Bold)
+        Text(stringResource(id = R.string.campo_operacion).uppercase(), style = MaterialTheme.typography.labelSmall, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
-        Card(colors = CardDefaults.cardColors(containerColor = Superficie), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+        Card(colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF163E45) else Superficie), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
             Column {
-                ItemListaPerfil(Icons.Outlined.Group, stringResource(id = R.string.subparte_equipo_compartido), state.miembrosEquipo)
-                HorizontalDivider(color = FondoAplicacion, modifier = Modifier.padding(horizontal = 16.dp))
-                ItemListaPerfil(Icons.Outlined.CalendarToday, stringResource(id = R.string.subparte_sesiones_compl), state.sesionesCompletadas)
-                HorizontalDivider(color = FondoAplicacion, modifier = Modifier.padding(horizontal = 16.dp))
-                ItemListaPerfil(Icons.Outlined.VerifiedUser, stringResource(id = R.string.subparte_permisos), state.permisosCodigo)
+                ItemListaPerfil(Icons.Outlined.Group, stringResource(id = R.string.subparte_equipo_compartido), state.miembrosEquipo, modoOscuro = modoOscuro)
+                HorizontalDivider(color = if (modoOscuro) Color(0xFF254A50) else FondoAplicacion, modifier = Modifier.padding(horizontal = 16.dp))
+                ItemListaPerfil(Icons.Outlined.CalendarToday, stringResource(id = R.string.subparte_sesiones_compl), state.sesionesCompletadas, modoOscuro = modoOscuro)
+                HorizontalDivider(color = if (modoOscuro) Color(0xFF254A50) else FondoAplicacion, modifier = Modifier.padding(horizontal = 16.dp))
+                ItemListaPerfil(Icons.Outlined.VerifiedUser, stringResource(id = R.string.subparte_permisos), state.permisosCodigo, modoOscuro = modoOscuro)
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        Text(stringResource(id = R.string.campo_preferencias).uppercase(), style = MaterialTheme.typography.labelSmall, color = TextoSecundario, fontWeight = FontWeight.Bold)
+        Text(stringResource(id = R.string.campo_preferencias).uppercase(), style = MaterialTheme.typography.labelSmall, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
-        Card(colors = CardDefaults.cardColors(containerColor = Superficie), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+        Card(colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF163E45) else Superficie), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
             Column {
-                ItemListaPerfil(Icons.Outlined.Wifi, stringResource(id = R.string.subparte_datos_conexion), state.datosPendientes)
-                HorizontalDivider(color = FondoAplicacion, modifier = Modifier.padding(horizontal = 16.dp))
-                ItemListaPerfil(Icons.Outlined.Notifications, stringResource(id = R.string.subparte_notificaciones), state.estadoNotificaciones)
+                ItemListaPerfil(Icons.Outlined.Wifi, stringResource(id = R.string.subparte_datos_conexion), state.datosPendientes, modoOscuro = modoOscuro)
+                HorizontalDivider(color = if (modoOscuro) Color(0xFF254A50) else FondoAplicacion, modifier = Modifier.padding(horizontal = 16.dp))
+                ItemListaPerfil(Icons.Outlined.Notifications, stringResource(id = R.string.subparte_notificaciones), state.estadoNotificaciones, modoOscuro = modoOscuro)
             }
         }
 
@@ -360,25 +360,25 @@ fun PerfilScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = ErrorSuave),
+            colors = ButtonDefaults.buttonColors(containerColor = if (modoOscuro) ErrorSuaveOscuro else ErrorSuave),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Icon(Icons.Outlined.ExitToApp, contentDescription = null, tint = Error)
+            Icon(Icons.Outlined.ExitToApp, contentDescription = null, tint = if (modoOscuro) ErrorOscuro else Error)
             Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(id = R.string.btn_cerrar_sesion), color = Error, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(stringResource(id = R.string.btn_cerrar_sesion), color = if (modoOscuro) ErrorOscuro else Error, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Card(colors = CardDefaults.cardColors(containerColor = ExitoSuave), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+        Card(colors = CardDefaults.cardColors(containerColor = if (modoOscuro) ExitoSuaveOscuro else ExitoSuave), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Wifi, contentDescription = null, tint = Exito)
+                Icon(Icons.Outlined.Wifi, contentDescription = null, tint = if (modoOscuro) ExitoOscuro else Exito)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(id = R.string.todo_sincronizado), color = Exito, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(stringResource(id = R.string.ultima_conexion), color = TextoSecundario, fontSize = 12.sp)
+                    Text(stringResource(id = R.string.todo_sincronizado), color = if (modoOscuro) ExitoOscuro else Exito, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(stringResource(id = R.string.ultima_conexion), color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario, fontSize = 12.sp)
                 }
-                Icon(Icons.Outlined.Check, contentDescription = null, tint = Exito)
+                Icon(Icons.Outlined.Check, contentDescription = null, tint = if (modoOscuro) ExitoOscuro else Exito)
             }
         }
 

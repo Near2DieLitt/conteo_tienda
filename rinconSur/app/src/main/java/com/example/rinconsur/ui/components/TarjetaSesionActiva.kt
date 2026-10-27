@@ -20,6 +20,7 @@ fun TarjetaSinSesionActiva(
     colorFondoContenedor: Color,
     verdeResaltado: Color,
     onIrASesiones: () -> Unit,
+    modoOscuro: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -46,7 +47,7 @@ fun TarjetaSinSesionActiva(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF1D4950) else Color.White),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
@@ -64,7 +65,7 @@ fun TarjetaSinSesionActiva(
                     Text(
                         text = "Para activar el panel de visitantes, crea/programa una sesión con código de acceso válido (A1, A2, A3 o A4) desde la sección 'Sesiones'.",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -75,9 +76,9 @@ fun TarjetaSinSesionActiva(
                         colors = ButtonDefaults.buttonColors(containerColor = verdeResaltado),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Ir a Sesiones", fontWeight = FontWeight.Bold)
+                        Text("Ir a Sesiones", fontWeight = FontWeight.Bold, color = Color.White)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
                     }
                 }
             }

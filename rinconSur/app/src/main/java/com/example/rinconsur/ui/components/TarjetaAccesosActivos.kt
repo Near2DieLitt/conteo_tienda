@@ -22,6 +22,7 @@ fun TarjetaAccesosActivos(
     zonasFlujo: String,
     colorFondoContenedor: Color,
     verdeResaltado: Color,
+    modoOscuro: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -54,7 +55,7 @@ fun TarjetaAccesosActivos(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF1D4950) else Color.White),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -64,10 +65,14 @@ fun TarjetaAccesosActivos(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = false, onClick = { })
+                            RadioButton(
+                                selected = false,
+                                onClick = { },
+                                colors = RadioButtonDefaults.colors(unselectedColor = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray)
+                            )
                             Column {
                                 Text("Flujo general", fontWeight = FontWeight.Bold, color = verdeResaltado)
-                                Text("Actualizado hace 2 min", fontSize = 11.sp, color = Color.Gray)
+                                Text("Actualizado hace 2 min", fontSize = 11.sp, color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray)
                             }
                         }
                         Text(totalFlujo, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = verdeResaltado)
@@ -82,7 +87,7 @@ fun TarjetaAccesosActivos(
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp)),
                         color = verdeResaltado,
-                        trackColor = Color(0xFFD3E3DF)
+                        trackColor = if (modoOscuro) Color(0xFF31575D) else Color(0xFFD3E3DF)
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
@@ -91,7 +96,7 @@ fun TarjetaAccesosActivos(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(zonasFlujo, fontSize = 10.sp, color = Color.Gray)
+                        Text(zonasFlujo, fontSize = 10.sp, color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray)
                         Text(textoMeta, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = verdeResaltado)
                     }
                 }

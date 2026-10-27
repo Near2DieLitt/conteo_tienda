@@ -5,11 +5,13 @@ import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import com.example.rinconsur.data.ConvertidorImagen
 import com.example.rinconsur.data.UsuarioDbHelper
+import com.example.rinconsur.model.Perfiles
 import com.example.rinconsur.model.RolUsuario
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+
 
 data class PerfilUiState(
     val nombre: String = "",
@@ -34,7 +36,8 @@ class PerfilViewModel(application: Application): AndroidViewModel(application){
         val usuario = dbHelper.obtenerUsuarioPorCorreo(correo)
 
         if (usuario != null){
-            val esSupervisor = usuario.rol == RolUsuario.SUPERVISOR
+            val perfil = Perfiles.deCodigo(usuario.perfil)
+            val miembros = dbHelper.obtenerColaboradores().count { it.activo }
 
             val bitmapGuardado = if (usuario.avatar != null){
                 ConvertidorImagen.aBitmap(usuario.avatar)
@@ -45,12 +48,11 @@ class PerfilViewModel(application: Application): AndroidViewModel(application){
             _uiState.update {
                 it.copy(
                     nombre = usuario.nombre,
-                    cargo = if (esSupervisor) "Supervisora de piso * Turno mañana"
-                            else "Observador de piso * turno mañana",
-                    miembrosEquipo = if (esSupervisor) "4 miembros" else "Sin equipo asignado",
+                    cargo = perfil.nombre,
+                    miembrosEquipo = if (miembros == 1) "1 miembro" else "$miembros miembros",
                     sesionesCompletadas = "$completadasCount",
-                    permisosCodigo = if (esSupervisor) "P-03" else "P-01",
-                    datosPendientes = if (esSupervisor) "0 pendientes" else "1 pendiente",
+                    permisosCodigo = perfil.codigo,
+                    datosPendientes = "0 pendientes",
                     fotoBitmap = bitmapGuardado,
                     descripcion = usuario.descripcion ?: ""
                 )

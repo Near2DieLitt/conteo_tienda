@@ -6,7 +6,9 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import at.favre.lib.crypto.bcrypt.BCrypt
+import com.example.rinconsur.model.Colaborador
 import com.example.rinconsur.model.ConteoSesion
+import com.example.rinconsur.model.Perfiles
 import com.example.rinconsur.model.RangoEtario
 import com.example.rinconsur.model.RegistroFlujo
 import com.example.rinconsur.model.ResultadoBoleta
@@ -21,10 +23,9 @@ import java.util.Locale
 
 class UsuarioDbHelper (context: Context):
     SQLiteOpenHelper(context, NOMBRE_BD, null, VERSION_BD){
-
     companion object{
         private const val NOMBRE_BD = "rinconsur.db"
-        private const val VERSION_BD = 6
+        private const val VERSION_BD = 7
 
         private const val TABLA_USUARIOS = "usuarios"
         private const val USU_ID = "id_usuario"
@@ -34,6 +35,9 @@ class UsuarioDbHelper (context: Context):
         private const val USU_ROL = "rol"
         private const val USU_AVATAR = "avatar"
         private const val USU_DESCRIPCION = "descripcion"
+        private const val USU_RUT = "rut"
+        private const val USU_PERFIL = "perfil"
+        private const val USU_ACTIVO = "activo"
 
         private const val TABLA_SESIONES = "sesiones"
         private const val TABLA_CONTEOS = "conteos"
@@ -58,7 +62,10 @@ class UsuarioDbHelper (context: Context):
                 $USU_CONTRASENA VARCHAR(255) NOT NULL,
                 $USU_ROL VARCHAR(50) NOT NULL,
                 $USU_AVATAR BLOB,
-                $USU_DESCRIPCION VARCHAR(255)
+                $USU_DESCRIPCION VARCHAR(255),
+                $USU_RUT VARCHAR(12) UNIQUE NOT NULL,
+                $USU_PERFIL VARCHAR(10) NOT NULL,
+                $USU_ACTIVO INTEGER NOT NULL DEFAULT 1
             )
         """.trimIndent()
         db.execSQL(crearTablaUsuarios)
@@ -124,11 +131,11 @@ class UsuarioDbHelper (context: Context):
         """.trimIndent()
         db.execSQL(crearTablaBoletas)
 
-        val hashObs = BCrypt.withDefaults().hashToString(12, "Observador123".toCharArray())
-        val hashSup = BCrypt.withDefaults().hashToString(12, "Supervisor123".toCharArray())
-
-        insertarUsuarioPrueba(db,"Observador rincón sur", "observador@rinconsur.cl", hashObs, RolUsuario.OBSERVADOR.name)
-        insertarUsuarioPrueba(db,"Supervisor rincón sur",  "supervisor@rinconsur.cl", hashSup, RolUsuario.SUPERVISOR.name)
+        sembrarUsuario(db, "Daniela Gonzales", "danielle@rinconsur.cl", "20123456-5", "Danielle123",
+            Perfiles.ADMINISTRADOR)
+        sembrarUsuario(db, "Nicole Soto", "nicole@rinconsur.cl", "19876543-0", "Nicole123", Perfiles.SUPERVISOR_PISO)
+        sembrarUsuario(db, "Renata Valdés", "renata@rinconsur.cl", "21045678-3", "Renata123", Perfiles.SUPERVISOR_CAJA)
+        sembrarUsuario(db, "Matías Olavarría", "matias@rinconsur.cl", "20456789-1", "Matias123", Perfiles.OBSERVADOR)
     }
 
 
@@ -142,12 +149,19 @@ class UsuarioDbHelper (context: Context):
         onCreate(db)
     }
 
-    private fun insertarUsuarioPrueba(db: SQLiteDatabase, nombre: String, correo: String, hash: String, rol: String){
+    private fun sembrarUsuario(
+        db: SQLiteDatabase, nombre: String, correo: String, rut: String,
+        clave: String, perfil: com.example.rinconsur.model.PerfilAcceso
+    ) {
+        val hash = BCrypt.withDefaults().hashToString(12, clave.toCharArray())
         val valores = ContentValues().apply {
             put(USU_NOMBRE, nombre)
             put(USU_CORREO, correo)
             put(USU_CONTRASENA, hash)
-            put(USU_ROL, rol)
+            put(USU_ROL, perfil.rol.name)
+            put(USU_RUT, rut)
+            put(USU_PERFIL, perfil.codigo)
+            put(USU_ACTIVO, 1)
         }
         db.insert(TABLA_USUARIOS, null, valores)
     }
@@ -157,7 +171,8 @@ class UsuarioDbHelper (context: Context):
         var usuario: Usuario? = null
 
         val cursor: Cursor = db.rawQuery(
-            "SELECT $USU_NOMBRE, $USU_CORREO, $USU_CONTRASENA, $USU_ROL, $USU_AVATAR, $USU_DESCRIPCION " +
+            "SELECT $USU_NOMBRE, $USU_CORREO, $USU_CONTRASENA, $USU_ROL, $USU_AVATAR, $USU_DESCRIPCION, " +
+                    "$USU_ID, $USU_RUT, $USU_PERFIL, $USU_ACTIVO " +
                     "FROM $TABLA_USUARIOS WHERE LOWER(TRIM($USU_CORREO)) = LOWER(TRIM(?))",
             arrayOf(correo)
         )
@@ -174,7 +189,11 @@ class UsuarioDbHelper (context: Context):
                 passwordHash = cursor.getString(2),
                 rol = rolEnum,
                 avatar = cursor.getBlob(4),
-                descripcion = cursor.getString(5)
+                descripcion = cursor.getString(5),
+                id = cursor.getInt(6),
+                rut = cursor.getString(7),
+                perfil = cursor.getString(8),
+                activo = cursor.getInt(9) == 1
             )
         }
         cursor.close()
@@ -208,7 +227,7 @@ class UsuarioDbHelper (context: Context):
 
     fun verificarCorreoExistente(correo: String): Boolean{
         val db = this.readableDatabase
-        val cursor = db.rawQuery("SELECT 1 FROM $TABLA_USUARIOS WHERE $USU_CORREO = ?", arrayOf(correo))
+        val cursor = db.rawQuery("SELECT 1 FROM $TABLA_USUARIOS WHERE LOWER(TRIM($USU_CORREO)) = LOWER(TRIM(?)) AND $USU_ACTIVO = 1", arrayOf(correo))
         val existe = cursor.moveToFirst()
         cursor.close()
         return existe
@@ -219,6 +238,122 @@ class UsuarioDbHelper (context: Context):
         val valores = ContentValues().apply { put(USU_CONTRASENA, nuevaContrasenaHash) }
         val filasAfectadas = db.update(TABLA_USUARIOS, valores, "$USU_CORREO = ?", arrayOf(correo))
         return filasAfectadas > 0
+    }
+
+    // ---------- Equipo (colaboradores) ----------
+
+    private fun colaboradorDe(c: Cursor): Colaborador {
+        val perfil = Perfiles.deCodigo(c.getString(4))
+        return Colaborador(
+            id = c.getInt(0),
+            nombre = c.getString(1),
+            correo = c.getString(2),
+            rut = c.getString(3),
+            perfil = perfil,
+            rol = perfil.rol,
+            activo = c.getInt(5) == 1
+        )
+    }
+
+    private val columnasColaborador = "$USU_ID, $USU_NOMBRE, $USU_CORREO, $USU_RUT, $USU_PERFIL, $USU_ACTIVO"
+
+    fun obtenerColaboradores(): List<Colaborador> {
+        val lista = mutableListOf<Colaborador>()
+        val c = readableDatabase.rawQuery(
+            "SELECT $columnasColaborador FROM $TABLA_USUARIOS ORDER BY $USU_ACTIVO DESC, $USU_PERFIL, $USU_NOMBRE",
+            null
+        )
+        while (c.moveToNext()) lista.add(colaboradorDe(c))
+        c.close()
+        return lista
+    }
+
+    fun obtenerColaboradorPorCorreo(correo: String): Colaborador? {
+        val c = readableDatabase.rawQuery(
+            "SELECT $columnasColaborador FROM $TABLA_USUARIOS WHERE LOWER(TRIM($USU_CORREO)) = LOWER(TRIM(?))",
+            arrayOf(correo)
+        )
+        val r = if (c.moveToFirst()) colaboradorDe(c) else null
+        c.close()
+        return r
+    }
+
+    fun obtenerColaboradorPorId(id: Int): Colaborador? {
+        val c = readableDatabase.rawQuery(
+            "SELECT $columnasColaborador FROM $TABLA_USUARIOS WHERE $USU_ID = ?",
+            arrayOf(id.toString())
+        )
+        val r = if (c.moveToFirst()) colaboradorDe(c) else null
+        c.close()
+        return r
+    }
+
+    /** Verdad en BD: el correo existe, está activo y es ADMIN. */
+    fun esAdminActivo(correo: String): Boolean {
+        val c = readableDatabase.rawQuery(
+            "SELECT 1 FROM $TABLA_USUARIOS WHERE LOWER(TRIM($USU_CORREO)) = LOWER(TRIM(?)) AND $USU_ROL = ? AND $USU_ACTIVO = 1",
+            arrayOf(correo, RolUsuario.ADMIN.name)
+        )
+        val r = c.moveToFirst()
+        c.close()
+        return r
+    }
+
+    fun contarAdminsActivos(): Int {
+        val c = readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM $TABLA_USUARIOS WHERE $USU_ROL = ? AND $USU_ACTIVO = 1",
+            arrayOf(RolUsuario.ADMIN.name)
+        )
+        val n = if (c.moveToFirst()) c.getInt(0) else 0
+        c.close()
+        return n
+    }
+
+    fun existeRut(rut: String): Boolean {
+        val c = readableDatabase.rawQuery("SELECT 1 FROM $TABLA_USUARIOS WHERE $USU_RUT = ?", arrayOf(rut))
+        val r = c.moveToFirst()
+        c.close()
+        return r
+    }
+
+    /** Correo ocupado por cualquier persona, activa o no (el UNIQUE aplica a todas). */
+    fun existeCorreoRegistrado(correo: String): Boolean {
+        val c = readableDatabase.rawQuery(
+            "SELECT 1 FROM $TABLA_USUARIOS WHERE LOWER(TRIM($USU_CORREO)) = LOWER(TRIM(?))",
+            arrayOf(correo)
+        )
+        val r = c.moveToFirst()
+        c.close()
+        return r
+    }
+
+    fun insertarColaborador(
+        nombre: String, correo: String, rut: String, hash: String,
+        perfil: com.example.rinconsur.model.PerfilAcceso
+    ): Long {
+        val valores = ContentValues().apply {
+            put(USU_NOMBRE, nombre)
+            put(USU_CORREO, correo)
+            put(USU_CONTRASENA, hash)
+            put(USU_ROL, perfil.rol.name)
+            put(USU_RUT, rut)
+            put(USU_PERFIL, perfil.codigo)
+            put(USU_ACTIVO, 1)
+        }
+        return writableDatabase.insert(TABLA_USUARIOS, null, valores)
+    }
+
+    fun cambiarActivoColaborador(id: Int, activo: Boolean): Boolean {
+        val valores = ContentValues().apply { put(USU_ACTIVO, if (activo) 1 else 0) }
+        return writableDatabase.update(TABLA_USUARIOS, valores, "$USU_ID = ?", arrayOf(id.toString())) > 0
+    }
+
+    fun cambiarPerfilColaborador(id: Int, perfil: com.example.rinconsur.model.PerfilAcceso): Boolean {
+        val valores = ContentValues().apply {
+            put(USU_PERFIL, perfil.codigo)
+            put(USU_ROL, perfil.rol.name)
+        }
+        return writableDatabase.update(TABLA_USUARIOS, valores, "$USU_ID = ?", arrayOf(id.toString())) > 0
     }
 
     fun insertarSesion(codigo: String, nombre: String, fecha: String): Long {

@@ -24,19 +24,20 @@ fun TarjetaSesionMenu(
     sesion: ItemSessionUi,
     onCheckedChange: (Boolean) -> Unit,
     onClickDetalle: () -> Unit,
+    modoOscuro: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val (colorFondoBadge, colorTextoBadge) = when (sesion.estado.lowercase()) {
-        "finalizada" -> Color(0xFFF3E0D1) to Color(0xFFB85D19)
-        "validada" -> Color(0xFFD4ECE2) to Color(0xFF1E7550)
-        else -> Color(0xFFE2ECEC) to Color(0xFF336666) // Programada
+        "finalizada" -> if (modoOscuro) Color(0xFF4B3525) to Color(0xFFF0A66D) else Color(0xFFF3E0D1) to Color(0xFFB85D19)
+        "validada" -> if (modoOscuro) Color(0xFF173E35) to Color(0xFF69C392) else Color(0xFFD4ECE2) to Color(0xFF1E7550)
+        else -> if (modoOscuro) Color(0xFF163E45) to Color(0xFFB9CACB) else Color(0xFFE2ECEC) to Color(0xFF336666) // Programada
     }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF1D4950) else Color.White),
         shape = RoundedCornerShape(14.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -56,20 +57,20 @@ fun TarjetaSesionMenu(
                             text = sesion.titulo,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            color = Color(0xFF12343B)
+                            color = if (modoOscuro) Color.White else Color(0xFF12343B)
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Outlined.CalendarToday,
                                 contentDescription = null,
                                 modifier = Modifier.size(12.dp),
-                                tint = Color.Gray
+                                tint = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = sesion.horaUbicacion,
                                 fontSize = 11.sp,
-                                color = Color.Gray
+                                color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray
                             )
                         }
                     }
@@ -97,7 +98,7 @@ fun TarjetaSesionMenu(
                         .align(Alignment.End)
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF0F5961))
+                        .background(if (modoOscuro) Color(0xFF2AAEA4) else Color(0xFF0F5961))
                 ) {
                     Icon(
                         imageVector = Icons.Filled.ChevronRight,

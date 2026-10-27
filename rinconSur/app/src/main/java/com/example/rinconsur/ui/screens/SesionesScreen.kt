@@ -97,11 +97,12 @@ fun SesionesScreen(
     sesionParaDeshabilitar?.let { sesion ->
         AlertDialog(
             onDismissRequest = { sesionParaDeshabilitar = null },
-            title = { Text("Deshabilitar sesión", fontWeight = FontWeight.Bold, color = Petroleo800) },
+            title = { Text("Deshabilitar sesión", fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800) },
             text = {
                 Text(
                     "¿Deshabilitar ${sesion.codigo} · ${sesion.nombre}? " +
-                            "Dejará de verse para los demás usuarios. Podrás habilitarla de nuevo cuando quieras."
+                            "Dejará de verse para los demás usuarios. Podrás habilitarla de nuevo cuando quieras.",
+                    color = if (modoOscuro) Color(0xFFB9CACB) else Color.Unspecified
                 )
             },
             confirmButton = {
@@ -116,7 +117,7 @@ fun SesionesScreen(
             },
             dismissButton = {
                 TextButton(onClick = { sesionParaDeshabilitar = null }) {
-                    Text("Cancelar", color = Petroleo800)
+                    Text("Cancelar", color = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800)
                 }
             }
         )
@@ -127,7 +128,8 @@ fun SesionesScreen(
         bottomBar = {
             BarraNavegacionInferior(
                 seleccionado = DestinoBarra.SESIONES,
-                onNavegar = onNavegar
+                onNavegar = onNavegar,
+                modoOscuro = modoOscuro
             )
         }
     ) { paddingValues ->
@@ -146,26 +148,26 @@ fun SesionesScreen(
                     Text(
                         text = stringResource(id = R.string.rotulo_rincon_sur),
                         style = MaterialTheme.typography.labelSmall,
-                        color = TextoSecundario,
+                        color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario,
                         letterSpacing = 2.sp
                     )
                     Text(
                         text = "Sesiones",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Petroleo800
+                        color = if (modoOscuro) Color.White else Petroleo800
                     )
                 }
                 IconButton(
                     onClick = onCambiarTema,
                     modifier = Modifier
-                        .background(Superficie, CircleShape)
+                        .background(if (modoOscuro) Color(0xFF163E45) else Superficie, CircleShape)
                         .size(48.dp)
                 ) {
                     Icon(
                         imageVector = if (modoOscuro) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
                         contentDescription = stringResource(id = R.string.desc_cambiar_tema),
-                        tint = Petroleo800
+                        tint = if (modoOscuro) Color.White else Petroleo800
                     )
                 }
             }
@@ -176,13 +178,13 @@ fun SesionesScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Turquesa100)
+                    .background(if (modoOscuro) Color(0xFF163E45) else Turquesa100)
                     .padding(4.dp)
             ) {
                 listOf("Hoy", "Semana", "Historial").forEachIndexed { i, titulo ->
                     val seleccionada = state.tab == i
                     val fondoTab by animateColorAsState(
-                        targetValue = if (seleccionada) Superficie else Color.Transparent,
+                        targetValue = if (seleccionada) (if (modoOscuro) Color(0xFF1D4950) else Superficie) else Color.Transparent,
                         animationSpec = tween(250),
                         label = "fondoTab"
                     )
@@ -199,7 +201,7 @@ fun SesionesScreen(
                             text = titulo,
                             fontSize = 13.sp,
                             fontWeight = if (seleccionada) FontWeight.Bold else FontWeight.Medium,
-                            color = if (seleccionada) Petroleo800 else TextoSecundario
+                            color = if (seleccionada) (if (modoOscuro) Color.White else Petroleo800) else (if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
                         )
                     }
                 }
@@ -208,14 +210,14 @@ fun SesionesScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = Turquesa100),
+                colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF163E45) else Turquesa100),
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { viewModel.cambiarMes(-1) }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Mes anterior", tint = TextoSecundario)
+                            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Mes anterior", tint = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
                         }
                         Text(
                             text = "${Fechas.meses[state.mesVisible]} ${state.aniosVisible}",
@@ -223,10 +225,10 @@ fun SesionesScreen(
                             textAlign = TextAlign.Center,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Petroleo800
+                            color = if (modoOscuro) Color.White else Petroleo800
                         )
                         IconButton(onClick = { viewModel.cambiarMes(1) }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Outlined.ChevronRight, contentDescription = "Mes siguiente", tint = TextoSecundario)
+                            Icon(Icons.Outlined.ChevronRight, contentDescription = "Mes siguiente", tint = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
                         }
                     }
 
@@ -239,7 +241,7 @@ fun SesionesScreen(
                                 modifier = Modifier.weight(1f),
                                 textAlign = TextAlign.Center,
                                 fontSize = 11.sp,
-                                color = TextoSecundario
+                                color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario
                             )
                         }
                     }
@@ -264,7 +266,7 @@ fun SesionesScreen(
                                         val seleccionado =
                                             Fechas.fecha(state.aniosVisible, state.mesVisible, dia) == state.fechaSeleccionada
                                         val fondoDia by animateColorAsState(
-                                            targetValue = if (seleccionado) Petroleo800 else Color.Transparent,
+                                            targetValue = if (seleccionado) (if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800) else Color.Transparent,
                                             animationSpec = tween(250),
                                             label = "fondoDia"
                                         )
@@ -281,8 +283,8 @@ fun SesionesScreen(
                                                 fontSize = 12.sp,
                                                 fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Normal,
                                                 color = if (seleccionado) Color.White
-                                                else if (esPasado) TextoSecundario.copy(alpha = 0.45f)
-                                                else TextoSecundario
+                                                else if (esPasado) (if (modoOscuro) Color(0xFFB9CACB).copy(alpha = 0.45f) else TextoSecundario.copy(alpha = 0.45f))
+                                                else (if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
                                             )
                                         }
                                     }
@@ -297,7 +299,7 @@ fun SesionesScreen(
 
             val fechaPasada = state.fechaSeleccionada < Fechas.hoy()
             val puedeProgramar = puedeEditar && !fechaPasada
-            val colorBorde = TextoSecundario
+            val colorBorde = if (modoOscuro) Color(0xFF31575D) else TextoSecundario
             val textoBoton = when {
                 !puedeEditar -> "Solo el administrador puede programar sesiones"
                 fechaPasada -> "No se puede programar en fechas pasadas"
@@ -326,13 +328,13 @@ fun SesionesScreen(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Outlined.Add, contentDescription = null, tint = Petroleo800)
+                    Icon(Icons.Outlined.Add, contentDescription = null, tint = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = textoBoton,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Petroleo800,
+                        color = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -349,7 +351,7 @@ fun SesionesScreen(
                     Text(
                         text = "No hay sesiones en este período",
                         fontSize = 13.sp,
-                        color = TextoSecundario
+                        color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario
                     )
                 }
             } else {
@@ -357,6 +359,7 @@ fun SesionesScreen(
                     TarjetaSesion(
                         sesion = sesion,
                         puedeEditar = puedeEditar,
+                        modoOscuro = modoOscuro,
                         onToggleConteo = { id, marcado -> viewModel.cambiarEstadoConteo(id, marcado) },
                         onCambiarActivoConteo = { id, activo ->
                             viewModel.cambiarActivoConteo(id, activo)
@@ -390,14 +393,15 @@ private fun TarjetaSesion(
     onCambiarActivoConteo: (Long, Boolean) -> Unit,
     onAgregarConteo: () -> Unit,
     onDeshabilitarSesion: () -> Unit,
-    onHabilitarSesion: () -> Unit
+    onHabilitarSesion: () -> Unit,
+    modoOscuro: Boolean = false
 ) {
     var menuAbierto by remember { mutableStateOf(false) }
     val vigentes = sesion.conteos.filter { it.activo }
     val completa = vigentes.isNotEmpty() && sesion.avance == 100
 
     val fondoTarjeta by animateColorAsState(
-        targetValue = if (completa) Color(0xFFF0ECE3) else Superficie,
+        targetValue = if (completa) (if (modoOscuro) Color(0xFF254A50) else Color(0xFFF0ECE3)) else (if (modoOscuro) Color(0xFF163E45) else Superficie),
         animationSpec = tween(400),
         label = "fondoTarjeta"
     )
@@ -416,7 +420,7 @@ private fun TarjetaSesion(
                     modifier = Modifier
                         .size(28.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Petroleo800),
+                        .background(if (modoOscuro) Color(0xFF0F5961) else Petroleo800),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(sesion.codigo, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -427,7 +431,7 @@ private fun TarjetaSesion(
                         text = sesion.nombre,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Petroleo800
+                        color = if (modoOscuro) Color.White else Petroleo800
                     )
                     if (!sesion.activo) {
                         Text("Deshabilitada", fontSize = 11.sp, color = Error)
@@ -436,7 +440,7 @@ private fun TarjetaSesion(
                 if (puedeEditar) {
                     Box {
                         IconButton(onClick = { menuAbierto = true }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Outlined.MoreHoriz, contentDescription = "Opciones", tint = TextoSecundario)
+                            Icon(Icons.Outlined.MoreHoriz, contentDescription = "Opciones", tint = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
                         }
                         DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
                             if (sesion.activo) {
@@ -471,7 +475,7 @@ private fun TarjetaSesion(
             Spacer(modifier = Modifier.height(12.dp))
 
             if (sesion.conteos.isEmpty()) {
-                Text("Sin conteos todavía", fontSize = 12.sp, color = TextoSecundario)
+                Text("Sin conteos todavía", fontSize = 12.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
             }
 
             sesion.conteos.forEach { conteo ->
@@ -493,11 +497,11 @@ private fun TarjetaSesion(
                             ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CasillaConteo(marcada = conteo.completado)
+                        CasillaConteo(marcada = conteo.completado, modoOscuro = modoOscuro)
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text(conteo.nombre, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Petroleo800)
-                            Text(conteo.horario, fontSize = 11.sp, color = Ambar600)
+                            Text(conteo.nombre, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = if (modoOscuro) Color.White else Petroleo800)
+                            Text(conteo.horario, fontSize = 11.sp, color = if (modoOscuro) AdvertenciaOscura else Ambar600)
                             if (!conteo.activo) {
                                 Text("Deshabilitado", fontSize = 10.sp, color = Error)
                             }
@@ -511,7 +515,7 @@ private fun TarjetaSesion(
                             Icon(
                                 imageVector = if (conteo.activo) Icons.Outlined.Block else Icons.Outlined.Restore,
                                 contentDescription = if (conteo.activo) "Deshabilitar conteo" else "Habilitar conteo",
-                                tint = TextoSecundario,
+                                tint = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -519,25 +523,25 @@ private fun TarjetaSesion(
                 }
             }
 
-            HorizontalDivider(color = FondoAplicacion, modifier = Modifier.padding(vertical = 12.dp))
+            HorizontalDivider(color = if (modoOscuro) Color(0xFF254A50) else FondoAplicacion, modifier = Modifier.padding(vertical = 12.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = Fechas.fechaLarga(sesion.fecha),
                     modifier = Modifier.weight(1f),
                     fontSize = 11.sp,
-                    color = TextoSecundario
+                    color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario
                 )
-                CirculoAvance(avance = sesion.avance)
+                CirculoAvance(avance = sesion.avance, modoOscuro = modoOscuro)
             }
         }
     }
 }
 
 @Composable
-private fun CasillaConteo(marcada: Boolean) {
+private fun CasillaConteo(marcada: Boolean, modoOscuro: Boolean = false) {
     val colorBorde by animateColorAsState(
-        targetValue = if (marcada) Petroleo800 else TextoSecundario,
+        targetValue = if (marcada) (if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800) else (if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario),
         animationSpec = tween(200),
         label = "bordeCasilla"
     )
@@ -557,13 +561,13 @@ private fun CasillaConteo(marcada: Boolean) {
             modifier = Modifier
                 .size(tamanoInterior.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(Petroleo800)
+                .background(if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800)
         )
     }
 }
 
 @Composable
-private fun CirculoAvance(avance: Int) {
+private fun CirculoAvance(avance: Int, modoOscuro: Boolean = false) {
     val avanceAnimado by animateFloatAsState(
         targetValue = avance / 100f,
         animationSpec = tween(700),
@@ -578,7 +582,7 @@ private fun CirculoAvance(avance: Int) {
             val area = Size(lado, lado)
 
             drawArc(
-                color = Color(0xFFE5E3DA),
+                color = if (modoOscuro) Color(0xFF254A50) else Color(0xFFE5E3DA),
                 startAngle = -90f,
                 sweepAngle = 360f,
                 useCenter = false,
@@ -587,7 +591,7 @@ private fun CirculoAvance(avance: Int) {
                 style = Stroke(width = grosor)
             )
             drawArc(
-                color = Ambar600,
+                color = if (modoOscuro) AdvertenciaOscura else Ambar600,
                 startAngle = -90f,
                 sweepAngle = 360f * avanceAnimado,
                 useCenter = false,
@@ -597,8 +601,8 @@ private fun CirculoAvance(avance: Int) {
             )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("$avance%", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Petroleo800)
-            Text("avance", fontSize = 7.sp, color = TextoSecundario)
+            Text("$avance%", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800)
+            Text("avance", fontSize = 7.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
         }
     }
 }
@@ -617,13 +621,13 @@ private fun DialogoNuevaSesion(
 
     AlertDialog(
         onDismissRequest = onCancelar,
-        title = { Text("Nueva sesión", fontWeight = FontWeight.Bold, color = Petroleo800) },
+        title = { Text("Nueva sesión", fontWeight = FontWeight.Bold) },
         text = {
             Column {
-                Text("Fecha: $fecha", fontSize = 13.sp, color = TextoSecundario)
+                Text("Fecha: $fecha", fontSize = 13.sp)
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Text("Código de entrada:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Petroleo800)
+                Text("Código de entrada:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Row(
@@ -668,12 +672,11 @@ private fun DialogoNuevaSesion(
         confirmButton = {
             Button(
                 onClick = { onGuardar(codigo.trim().uppercase(), nombre.trim()) },
-                enabled = esValido,
-                colors = ButtonDefaults.buttonColors(containerColor = Petroleo800)
+                enabled = esValido
             ) { Text("Guardar") }
         },
         dismissButton = {
-            TextButton(onClick = onCancelar) { Text("Cancelar", color = Petroleo800) }
+            TextButton(onClick = onCancelar) { Text("Cancelar") }
         }
     )
 }
@@ -689,10 +692,10 @@ private fun DialogoNuevoConteo(
 
     AlertDialog(
         onDismissRequest = onCancelar,
-        title = { Text("Agregar conteo", fontWeight = FontWeight.Bold, color = Petroleo800) },
+        title = { Text("Agregar conteo", fontWeight = FontWeight.Bold) },
         text = {
             Column {
-                Text(titulo, fontSize = 13.sp, color = TextoSecundario)
+                Text(titulo, fontSize = 13.sp)
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = nombre,
@@ -716,12 +719,11 @@ private fun DialogoNuevoConteo(
         confirmButton = {
             Button(
                 onClick = { onGuardar(nombre, horario) },
-                enabled = nombre.isNotBlank() && horario.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = Petroleo800)
+                enabled = nombre.isNotBlank() && horario.isNotBlank()
             ) { Text("Guardar") }
         },
         dismissButton = {
-            TextButton(onClick = onCancelar) { Text("Cancelar", color = Petroleo800) }
+            TextButton(onClick = onCancelar) { Text("Cancelar") }
         }
     )
 }

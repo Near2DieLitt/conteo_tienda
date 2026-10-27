@@ -40,7 +40,7 @@ class LoginViewModel(application: Application): AndroidViewModel(application) {
     }
     fun actualizarCorreo(nuevoCorreo: String) {
         _uiState.update {
-            estado ->
+                estado ->
             estado.copy(
                 correo = nuevoCorreo,
                 mensajeError = null
@@ -92,6 +92,11 @@ class LoginViewModel(application: Application): AndroidViewModel(application) {
 
         if (usuarioEncontrado == null){
             mostrarError("Correo o contraseña incorrectos")
+            return
+        }
+
+        if (!usuarioEncontrado.activo) {
+            mostrarError("Tu cuenta está deshabilitada. Contacta a un administrador.")
             return
         }
 

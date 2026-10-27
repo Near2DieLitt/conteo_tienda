@@ -10,6 +10,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
@@ -33,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -50,6 +53,7 @@ import com.example.rinconsur.viewmodel.RecuperarContrasenaViewModel
 
 @Composable
 fun RecuperarContrasenaScreen(
+    modoOscuro: Boolean = false,
     onVolver: () -> Unit,
     onContrasenaCreada: () -> Unit,
     viewModel: RecuperarContrasenaViewModel = viewModel()
@@ -105,8 +109,19 @@ fun RecuperarContrasenaScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            IconButton(onClick = onVolver) {
-                Icon(imageVector = Icons.Outlined.ArrowBack, contentDescription = "Volver")
+            IconButton(
+                onClick = onVolver,
+                modifier = Modifier
+                    .background(if (modoOscuro) Color(0xFF163E45) else MaterialTheme.colorScheme.surface,
+                        CircleShape
+                    )
+                    .size(48.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.ArrowBack,
+                    contentDescription = "Volver",
+                    tint = if (modoOscuro) Color.White else MaterialTheme.colorScheme.primary
+                )
             }
 
             Spacer(Modifier.height(24.dp))

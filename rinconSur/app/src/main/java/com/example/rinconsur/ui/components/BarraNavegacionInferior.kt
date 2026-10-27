@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
@@ -29,27 +30,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-
 enum class DestinoBarra(val etiqueta: String, val icono: ImageVector) {
     INICIO("Inicio", Icons.Outlined.Home),
     SESIONES("Sesiones", Icons.Outlined.CalendarToday),
     ANALITICA("Analítica", Icons.Outlined.BarChart),
+    EQUIPO("Equipo", Icons.Outlined.Group),
     PERFIL("Perfil", Icons.Outlined.Person)
 }
 
 @Composable
 fun BarraNavegacionInferior(
     seleccionado: DestinoBarra,
-    onNavegar: (DestinoBarra) -> Unit
+    onNavegar: (DestinoBarra) -> Unit,
+    modoOscuro: Boolean = false
 ) {
     NavigationBar(
-        containerColor = Color(0xFF103336),
+        containerColor = if (modoOscuro) Color(0xFF071F24) else Color(0xFF103336),
         contentColor = Color.White
     ) {
         listOf(
             DestinoBarra.INICIO,
             DestinoBarra.SESIONES,
             DestinoBarra.ANALITICA,
+            DestinoBarra.EQUIPO,
             DestinoBarra.PERFIL
         ).forEach { destino ->
             val activo = destino == seleccionado
@@ -78,7 +81,7 @@ fun BarraNavegacionInferior(
                         modifier = Modifier
                             .scale(escala)
                             .background(colorPildora, RoundedCornerShape(16.dp))
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = destino.icono,

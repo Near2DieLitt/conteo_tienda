@@ -21,6 +21,7 @@ fun TarjetaIniciarSesionEntrada(
     colorFondoContenedor: Color,
     verdeResaltado: Color,
     onIniciarSesion: (codigo: String) -> Unit,
+    modoOscuro: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var entradaSeleccionada by remember { mutableStateOf("A1") }
@@ -49,7 +50,7 @@ fun TarjetaIniciarSesionEntrada(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF1D4950) else Color.White),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
@@ -60,7 +61,7 @@ fun TarjetaIniciarSesionEntrada(
                     Text(
                         text = "Inicia sesión con una entrada válida para activar el control de visitantes en tiempo real.",
                         fontSize = 13.sp,
-                        color = Color.Gray
+                        color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -93,7 +94,9 @@ fun TarjetaIniciarSesionEntrada(
                                 modifier = Modifier.weight(1f),
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = verdeResaltado,
-                                    selectedLabelColor = Color.White
+                                    selectedLabelColor = Color.White,
+                                    containerColor = if (modoOscuro) Color(0xFF163E45) else Color.Transparent,
+                                    labelColor = if (modoOscuro) Color(0xFFB9CACB) else Color.Unspecified
                                 )
                             )
                         }
@@ -104,7 +107,7 @@ fun TarjetaIniciarSesionEntrada(
                     Text(
                         text = "Acceso $entradaSeleccionada: ${Accesos.nombre(entradaSeleccionada)}",
                         fontSize = 11.sp,
-                        color = Color.Gray,
+                        color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray,
                         fontWeight = FontWeight.Medium
                     )
 
@@ -116,9 +119,9 @@ fun TarjetaIniciarSesionEntrada(
                         colors = ButtonDefaults.buttonColors(containerColor = verdeResaltado),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Outlined.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Outlined.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Iniciar Sesión en $entradaSeleccionada", fontWeight = FontWeight.Bold)
+                        Text("Iniciar Sesión en $entradaSeleccionada", fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }
