@@ -3,6 +3,7 @@ package com.example.rinconsur
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -20,21 +21,22 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            var modoOscuro by rememberSaveable {
-                mutableStateOf(false)
+            val esTemaOscuroSistema = isSystemInDarkTheme()
+            var modoOscuroManual by rememberSaveable {
+                mutableStateOf<Boolean?>(null)
             }
-
+            val modoOscuroActivo = modoOscuroManual ?: esTemaOscuroSistema
             RinconSurTheme(
-                darkTheme = modoOscuro
+                darkTheme = modoOscuroActivo
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     AppNavigation(
-                        modoOscuro = modoOscuro,
+                        modoOscuro = modoOscuroActivo,
                         onCambiarTema = {
-                            modoOscuro = !modoOscuro
+                            modoOscuroManual = !modoOscuroActivo
                         }
                     )
                 }

@@ -25,7 +25,7 @@ class UsuarioDbHelper (context: Context):
     SQLiteOpenHelper(context, NOMBRE_BD, null, VERSION_BD){
     companion object{
         private const val NOMBRE_BD = "rinconsur.db"
-        private const val VERSION_BD = 7
+        private const val VERSION_BD = 8
 
         private const val TABLA_USUARIOS = "usuarios"
         private const val USU_ID = "id_usuario"
@@ -131,7 +131,7 @@ class UsuarioDbHelper (context: Context):
         """.trimIndent()
         db.execSQL(crearTablaBoletas)
 
-        sembrarUsuario(db, "Daniela Gonzales", "danielle@rinconsur.cl", "20123456-5", "Danielle123",
+        sembrarUsuario(db, "Daniela Gonzales", "daniela@rinconsur.cl", "20123456-5", "Daniela123",
             Perfiles.ADMINISTRADOR)
         sembrarUsuario(db, "Nicole Soto", "nicole@rinconsur.cl", "19876543-0", "Nicole123", Perfiles.SUPERVISOR_PISO)
         sembrarUsuario(db, "Renata Valdés", "renata@rinconsur.cl", "21045678-3", "Renata123", Perfiles.SUPERVISOR_CAJA)
@@ -356,11 +356,26 @@ class UsuarioDbHelper (context: Context):
         return writableDatabase.update(TABLA_USUARIOS, valores, "$USU_ID = ?", arrayOf(id.toString())) > 0
     }
 
-    fun insertarSesion(codigo: String, nombre: String, fecha: String): Long {
+    fun obtenerUsuariosListado(): List<Pair<String, String>> {
+        val db = readableDatabase
+        val lista = mutableListOf<Pair<String, String>>()
+        db.rawQuery(
+            "SELECT $USU_CORREO, $USU_NOMBRE FROM $TABLA_USUARIOS WHERE $USU_ACTIVO = 1 ORDER BY $USU_NOMBRE ASC",
+            null
+        ).use { c ->
+            while (c.moveToNext()) {
+                lista.add(Pair(c.getString(0), c.getString(1)))
+            }
+        }
+        return lista
+    }
+
+    fun insertarSesion(codigo: String, nombre: String, fecha: String, usuarioAsignado: String? = null): Long {
         val valores = ContentValues().apply {
             put("codigo", codigo)
             put("nombre", nombre)
             put("fecha", fecha)
+            put("usuario_asignado", usuarioAsignado)
             put("activo", 1)
         }
         return writableDatabase.insert(TABLA_SESIONES, null, valores)
@@ -418,25 +433,37 @@ class UsuarioDbHelper (context: Context):
         writableDatabase.update(TABLA_CONTEOS, valores, "id_conteo = ?", arrayOf(idConteo.toString()))
     }
 
-    fun obtenerSesiones(desde: String, hasta: String, incluirInactivas: Boolean): List<SesionAcceso> {
+    fun obtenerSesiones(desde: String, hasta: String, incluirInactivas: Boolean, correoUsuario: String? = null): List<SesionAcceso> {
         val db = readableDatabase
         val lista = mutableListOf<SesionAcceso>()
-        val filtroActivo = if (incluirInactivas) "" else " AND activo = 1"
+        val filtroActivo = if (incluirInactivas) "" else " AND s.activo = 1"
+        val filtroUsuario = if (!correoUsuario.isNullOrBlank()) " AND (s.usuario_asignado IS NULL OR s.usuario_asignado = '' OR LOWER(TRIM(s.usuario_asignado)) = LOWER(TRIM('$correoUsuario')))" else ""
 
-        db.rawQuery(
-            "SELECT id_sesion, codigo, nombre, fecha, activo FROM $TABLA_SESIONES " +
-                    "WHERE fecha BETWEEN ? AND ?$filtroActivo ORDER BY fecha DESC, id_sesion ASC",
-            arrayOf(desde, hasta)
-        ).use { c ->
+        val sql = "SELECT s.id_sesion, s.codigo, s.nombre, s.fecha, s.activo, COALESCE(u.$USU_NOMBRE, s.usuario_asignado) " +
+                "FROM $TABLA_SESIONES s " +
+                "LEFT JOIN $TABLA_USUARIOS u ON LOWER(TRIM(u.$USU_CORREO)) = LOWER(TRIM(s.usuario_asignado)) " +
+                "WHERE s.fecha BETWEEN ? AND ?$filtroActivo$filtroUsuario ORDER BY s.fecha DESC, s.id_sesion ASC"
+
+        db.rawQuery(sql, arrayOf(desde, hasta)).use { c ->
             while (c.moveToNext()) {
                 val id = c.getLong(0)
+                val codigo = c.getString(1)
+                val fecha = c.getString(3)
+                val flujo = obtenerResumenFlujo(fecha, fecha, acceso = codigo)
+                val totalIng = maxOf(flujo.ingresos, flujo.transitoJoven + flujo.transitoAdulto + flujo.transitoMayor)
+
                 lista.add(
                     SesionAcceso(
                         id = id,
-                        codigo = c.getString(1),
+                        codigo = codigo,
                         nombre = c.getString(2),
-                        fecha = c.getString(3),
+                        fecha = fecha,
                         activo = c.getInt(4) == 1,
+                        usuarioAsignado = c.getString(5),
+                        transitoJoven = flujo.transitoJoven,
+                        transitoAdulto = flujo.transitoAdulto,
+                        transitoMayor = flujo.transitoMayor,
+                        totalIngresos = totalIng,
                         conteos = obtenerConteos(db, id, incluirInactivas)
                     )
                 )
@@ -744,12 +771,14 @@ class UsuarioDbHelper (context: Context):
         return ResultadoBoleta.Exito(idVisitante, folioLimpio)
     }
 
-    fun obtenerSesionesActivasEntrada(fecha: String = Fechas.hoy()): List<SesionAcceso> {
+    fun obtenerSesionesActivasEntrada(fecha: String = Fechas.hoy(), correoUsuario: String? = null): List<SesionAcceso> {
         val db = readableDatabase
         val lista = mutableListOf<SesionAcceso>()
+        val filtroUsuario = if (!correoUsuario.isNullOrBlank()) " AND (usuario_asignado IS NULL OR usuario_asignado = '' OR LOWER(TRIM(usuario_asignado)) = LOWER(TRIM('$correoUsuario')))" else ""
+
         db.rawQuery(
-            "SELECT id_sesion, codigo, nombre, fecha, activo FROM $TABLA_SESIONES " +
-                    "WHERE fecha = ? AND activo = 1 AND UPPER(codigo) IN ('A1', 'A2', 'A3', 'A4') " +
+            "SELECT id_sesion, codigo, nombre, fecha, activo, usuario_asignado FROM $TABLA_SESIONES " +
+                    "WHERE fecha = ? AND activo = 1 AND UPPER(codigo) IN ('A1', 'A2', 'A3', 'A4')$filtroUsuario " +
                     "ORDER BY id_sesion DESC",
             arrayOf(fecha)
         ).use { c ->
@@ -762,6 +791,7 @@ class UsuarioDbHelper (context: Context):
                         nombre = c.getString(2),
                         fecha = c.getString(3),
                         activo = c.getInt(4) == 1,
+                        usuarioAsignado = c.getString(5),
                         conteos = emptyList()
                     )
                 )
@@ -769,7 +799,6 @@ class UsuarioDbHelper (context: Context):
         }
         return lista
     }
-
     fun registrarOActualizarFlujo(
         acceso: String,
         fecha: String = Fechas.hoy(),
@@ -783,7 +812,6 @@ class UsuarioDbHelper (context: Context):
                     "FROM $TABLA_FLUJO WHERE fecha = ? AND acceso = ? AND activo = 1 LIMIT 1",
             arrayOf(fecha, acceso)
         )
-
         if (cursor.moveToFirst()) {
             val id = cursor.getLong(0)
             val ingresosAct = cursor.getInt(1) + deltaIngresos

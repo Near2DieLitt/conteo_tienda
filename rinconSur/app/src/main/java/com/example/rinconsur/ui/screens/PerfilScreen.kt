@@ -370,18 +370,6 @@ fun PerfilScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Card(colors = CardDefaults.cardColors(containerColor = if (modoOscuro) ExitoSuaveOscuro else ExitoSuave), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Wifi, contentDescription = null, tint = if (modoOscuro) ExitoOscuro else Exito)
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(id = R.string.todo_sincronizado), color = if (modoOscuro) ExitoOscuro else Exito, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(stringResource(id = R.string.ultima_conexion), color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario, fontSize = 12.sp)
-                }
-                Icon(Icons.Outlined.Check, contentDescription = null, tint = if (modoOscuro) ExitoOscuro else Exito)
-            }
-        }
-
         Spacer(modifier = Modifier.height(40.dp))
     }
 }

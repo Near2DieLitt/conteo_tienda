@@ -15,7 +15,8 @@ data class SesionesUiState(
     val fechaSeleccionada: String = "",
     val aniosVisible: Int = 0,
     val mesVisible: Int = 0,
-    val sesiones: List<SesionAcceso> = emptyList()
+    val sesiones: List<SesionAcceso> = emptyList(),
+    val usuariosDisponibles: List<Pair<String, String>> = emptyList()
 )
 
 class SesionesViewModel (application: Application): AndroidViewModel(application){
@@ -28,6 +29,7 @@ class SesionesViewModel (application: Application): AndroidViewModel(application
 
     init {
         recargar()
+        cargarUsuarios()
     }
 
     private fun estadoInicial(): SesionesUiState {
@@ -38,6 +40,11 @@ class SesionesViewModel (application: Application): AndroidViewModel(application
             aniosVisible = c.get(Calendar.YEAR),
             mesVisible = c.get(Calendar.MONTH)
         )
+    }
+
+    fun cargarUsuarios() {
+        val lista = db.obtenerUsuariosListado()
+        _uiState.update { it.copy(usuariosDisponibles = lista) }
     }
 
     fun definirPermisos(puede: Boolean) {
@@ -82,7 +89,7 @@ class SesionesViewModel (application: Application): AndroidViewModel(application
     }
 
 
-    fun crearSesion(codigo: String, nombre: String): Boolean {
+    fun crearSesion(codigo: String, nombre: String, usuarioAsignado: String? = null): Boolean {
         if (!puedeEditar) return false
         val codigoLimpio = codigo.trim().uppercase()
         val entradasValidas = setOf("A1", "A2", "A3", "A4")
@@ -90,7 +97,7 @@ class SesionesViewModel (application: Application): AndroidViewModel(application
 
         val fecha = _uiState.value.fechaSeleccionada
         if (fecha < Fechas.hoy()) return false
-        db.insertarSesion(codigoLimpio, nombre.trim(), fecha)
+        db.insertarSesion(codigoLimpio, nombre.trim(), fecha, usuarioAsignado)
         recargar()
         return true
     }
@@ -101,11 +108,7 @@ class SesionesViewModel (application: Application): AndroidViewModel(application
         recargar()
     }
 
-    fun agregarConteo(idSesion: Long, nombre: String, horario: String) {
-        if (!puedeEditar) return
-        db.insertarConteo(idSesion, nombre.trim(), horario.trim())
-        recargar()
-    }
+
 
     fun cambiarActivoConteo(idConteo: Long, activo: Boolean) {
         if (!puedeEditar) return

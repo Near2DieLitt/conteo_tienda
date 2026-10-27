@@ -14,6 +14,11 @@ data class SesionAcceso(
     val nombre: String,
     val fecha: String,
     val activo: Boolean,
+    val usuarioAsignado: String? = null,
+    val transitoJoven: Int = 0,
+    val transitoAdulto: Int = 0,
+    val transitoMayor: Int = 0,
+    val totalIngresos: Int = 0,
     val conteos: List<ConteoSesion>
 ){
     val avance: Int

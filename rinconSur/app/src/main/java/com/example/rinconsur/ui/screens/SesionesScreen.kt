@@ -69,13 +69,14 @@ fun SesionesScreen(
     if (mostrarNuevaSesion) {
         DialogoNuevaSesion(
             fecha = Fechas.fechaLarga(state.fechaSeleccionada),
+            usuarios = state.usuariosDisponibles,
             onCancelar = { mostrarNuevaSesion = false },
-            onGuardar = { codigo, nombre ->
-                val creada = viewModel.crearSesion(codigo, nombre)
+            onGuardar = { codigo, nombre, usuarioAsignado ->
+                val creada = viewModel.crearSesion(codigo, nombre, usuarioAsignado)
                 mostrarNuevaSesion = false
                 Toast.makeText(
                     context,
-                    if (creada) "Sesión creada" else "No se puede programar en una fecha pasada",
+                    if (creada) "Sesión creada y asignada" else "No se puede programar en una fecha pasada",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -87,7 +88,6 @@ fun SesionesScreen(
             titulo = "${sesion.codigo} · ${sesion.nombre}",
             onCancelar = { sesionParaConteo = null },
             onGuardar = { nombre, horario ->
-                viewModel.agregarConteo(sesion.id, nombre, horario)
                 sesionParaConteo = null
                 Toast.makeText(context, "Conteo agregado", Toast.LENGTH_SHORT).show()
             }
@@ -294,7 +294,6 @@ fun SesionesScreen(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
 
             val fechaPasada = state.fechaSeleccionada < Fechas.hoy()
@@ -340,7 +339,6 @@ fun SesionesScreen(
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-
             if (state.sesiones.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -369,7 +367,6 @@ fun SesionesScreen(
                                 Toast.LENGTH_SHORT
                             ).show()
                         },
-                        onAgregarConteo = { sesionParaConteo = sesion },
                         onDeshabilitarSesion = { sesionParaDeshabilitar = sesion },
                         onHabilitarSesion = {
                             viewModel.cambiarActivoSesion(sesion.id, true)
@@ -379,19 +376,16 @@ fun SesionesScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
             }
-
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
-
 @Composable
 private fun TarjetaSesion(
     sesion: SesionAcceso,
     puedeEditar: Boolean,
     onToggleConteo: (Long, Boolean) -> Unit,
     onCambiarActivoConteo: (Long, Boolean) -> Unit,
-    onAgregarConteo: () -> Unit,
     onDeshabilitarSesion: () -> Unit,
     onHabilitarSesion: () -> Unit,
     modoOscuro: Boolean = false
@@ -405,7 +399,6 @@ private fun TarjetaSesion(
         animationSpec = tween(400),
         label = "fondoTarjeta"
     )
-
     Card(
         colors = CardDefaults.cardColors(containerColor = fondoTarjeta),
         shape = RoundedCornerShape(16.dp),
@@ -433,6 +426,27 @@ private fun TarjetaSesion(
                         fontWeight = FontWeight.Bold,
                         color = if (modoOscuro) Color.White else Petroleo800
                     )
+
+                    if (!sesion.usuarioAsignado.isNullOrBlank()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(top = 2.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Person,
+                                contentDescription = null,
+                                tint = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = sesion.usuarioAsignado,
+                                fontSize = 11.sp,
+                                color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario
+                            )
+                        }
+                    }
+
                     if (!sesion.activo) {
                         Text("Deshabilitada", fontSize = 11.sp, color = Error)
                     }
@@ -444,13 +458,6 @@ private fun TarjetaSesion(
                         }
                         DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
                             if (sesion.activo) {
-                                DropdownMenuItem(
-                                    text = { Text("Agregar conteo") },
-                                    onClick = {
-                                        menuAbierto = false
-                                        onAgregarConteo()
-                                    }
-                                )
                                 DropdownMenuItem(
                                     text = { Text("Deshabilitar sesión", color = Error) },
                                     onClick = {
@@ -471,11 +478,49 @@ private fun TarjetaSesion(
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(10.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (modoOscuro) Color(0xFF0F5961).copy(alpha = 0.25f) else Color(0xFFF4F7F6)
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Text(
+                        text = "Visitantes ingresados",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (modoOscuro) Color.White else Petroleo800
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("• Joven: ${sesion.transitoJoven}", fontSize = 11.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
+                        Text("• Adulto: ${sesion.transitoAdulto}", fontSize = 11.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
+                        Text("• Mayor: ${sesion.transitoMayor}", fontSize = 11.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    HorizontalDivider(color = if (modoOscuro) Color(0xFF254A50) else Color(0xFFE0E8E6))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Total personas:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800)
+                        Text("${sesion.totalIngresos} personas", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Ambar600)
+                    }
+                }
+            }
 
             if (sesion.conteos.isEmpty()) {
-                Text("Sin conteos todavía", fontSize = 12.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Sin sub-conteos programados", fontSize = 11.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
             }
 
             sesion.conteos.forEach { conteo ->
@@ -522,7 +567,6 @@ private fun TarjetaSesion(
                     }
                 }
             }
-
             HorizontalDivider(color = if (modoOscuro) Color(0xFF254A50) else FondoAplicacion, modifier = Modifier.padding(vertical = 12.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
@@ -537,7 +581,6 @@ private fun TarjetaSesion(
         }
     }
 }
-
 @Composable
 private fun CasillaConteo(marcada: Boolean, modoOscuro: Boolean = false) {
     val colorBorde by animateColorAsState(
@@ -550,7 +593,6 @@ private fun CasillaConteo(marcada: Boolean, modoOscuro: Boolean = false) {
         animationSpec = tween(200),
         label = "interiorCasilla"
     )
-
     Box(
         modifier = Modifier
             .size(18.dp)
@@ -565,7 +607,6 @@ private fun CasillaConteo(marcada: Boolean, modoOscuro: Boolean = false) {
         )
     }
 }
-
 @Composable
 private fun CirculoAvance(avance: Int, modoOscuro: Boolean = false) {
     val avanceAnimado by animateFloatAsState(
@@ -606,16 +647,18 @@ private fun CirculoAvance(avance: Int, modoOscuro: Boolean = false) {
         }
     }
 }
-
 @Composable
 private fun DialogoNuevaSesion(
     fecha: String,
+    usuarios: List<Pair<String, String>>,
     onCancelar: () -> Unit,
-    onGuardar: (String, String) -> Unit
+    onGuardar: (String, String, String?) -> Unit
 ) {
     val entradasValidas = listOf("A1", "A2", "A3", "A4")
     var codigo by remember { mutableStateOf("A1") }
     var nombre by remember { mutableStateOf("Acceso ${com.example.rinconsur.model.Accesos.nombre("A1")}") }
+    var usuarioAsignado by remember { mutableStateOf(usuarios.firstOrNull()?.first ?: "") }
+    var menuUsuariosAbierto by remember { mutableStateOf(false) }
 
     val esValido = codigo.trim().uppercase() in entradasValidas && nombre.isNotBlank()
 
@@ -659,6 +702,46 @@ private fun DialogoNuevaSesion(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                if (usuarios.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Asignar a colaborador:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        val usuarioNombreSel = usuarios.find { it.first == usuarioAsignado }?.second ?: "Sin asignar (Disponible para todos)"
+                        OutlinedButton(
+                            onClick = { menuUsuariosAbierto = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(usuarioNombreSel, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                            Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null)
+                        }
+
+                        DropdownMenu(
+                            expanded = menuUsuariosAbierto,
+                            onDismissRequest = { menuUsuariosAbierto = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Sin asignar (Disponible para todos)", fontWeight = FontWeight.Bold) },
+                                onClick = {
+                                    usuarioAsignado = ""
+                                    menuUsuariosAbierto = false
+                                }
+                            )
+                            usuarios.forEach { (correo, nombreUsu) ->
+                                DropdownMenuItem(
+                                    text = { Text(nombreUsu) },
+                                    onClick = {
+                                        usuarioAsignado = correo
+                                        menuUsuariosAbierto = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 if (!esValido) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -671,7 +754,7 @@ private fun DialogoNuevaSesion(
         },
         confirmButton = {
             Button(
-                onClick = { onGuardar(codigo.trim().uppercase(), nombre.trim()) },
+                onClick = { onGuardar(codigo.trim().uppercase(), nombre.trim(), usuarioAsignado.ifBlank { null }) },
                 enabled = esValido
             ) { Text("Guardar") }
         },
@@ -680,7 +763,6 @@ private fun DialogoNuevaSesion(
         }
     )
 }
-
 @Composable
 private fun DialogoNuevoConteo(
     titulo: String,

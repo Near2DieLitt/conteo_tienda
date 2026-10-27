@@ -56,8 +56,12 @@ class MenuPrincipalViewmodel(application: Application) : AndroidViewModel(applic
         cargarVisitantes()
     }
 
-    fun cargarSesionesEntrada() {
-        val sesionesActivas = dbHelper.obtenerSesionesActivasEntrada(Fechas.hoy())
+    fun cargarSesionesEntrada(correoOverride: String? = null) {
+        val correo = correoOverride ?: _uiState.value.correoUsuario
+        val esSupervisor = _uiState.value.rolUsuario == RolUsuario.SUPERVISOR
+        val correoFiltro = if (esSupervisor) null else correo
+
+        val sesionesActivas = dbHelper.obtenerSesionesActivasEntrada(Fechas.hoy(), correoFiltro)
         var entrada = sesionPrefs.obtenerEntradaActiva()
 
         if (sesionesActivas.isNotEmpty()) {
@@ -118,7 +122,8 @@ class MenuPrincipalViewmodel(application: Application) : AndroidViewModel(applic
                 ) 
             }
         }
-        cargarSesionesEntrada()
+        cargarSesionesEntrada(correo)
+        cargarSessiones()
         cargarVisitantes()
     }
 
@@ -179,8 +184,9 @@ class MenuPrincipalViewmodel(application: Application) : AndroidViewModel(applic
         } else {
             Pair(sumarDias(hoy, 1), "2099-12-31")
         }
-
-        val listaDb = dbHelper.obtenerSesiones(desde, hasta, incluirInactivas = true)
+        val esSupervisor = _uiState.value.rolUsuario == RolUsuario.SUPERVISOR
+        val correoFiltro = if (esSupervisor) null else _uiState.value.correoUsuario
+        val listaDb = dbHelper.obtenerSesiones(desde, hasta, incluirInactivas = true, correoUsuario = correoFiltro)
 
         val itemsMapped = listaDb.map { sesion ->
             val primerHorario = sesion.conteos.firstOrNull()?.horario ?: "Programada"
