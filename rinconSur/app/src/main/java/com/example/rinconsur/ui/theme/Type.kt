@@ -9,10 +9,10 @@ import androidx.compose.ui.unit.sp
 
 
 
-// Familia tipográfica para textos generales
+
 
 val TipografiaRinconSur = Typography(
-    // Títulos promocionales o cifras destacadas
+
     displayLarge = TextStyle(
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.Bold,
@@ -34,7 +34,7 @@ val TipografiaRinconSur = Typography(
         lineHeight = 38.sp
     ),
 
-    // Encabezados de pantallas
+
     headlineLarge = TextStyle(
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.Bold,
@@ -54,7 +54,7 @@ val TipografiaRinconSur = Typography(
         lineHeight = 28.sp
     ),
 
-    // Títulos de tarjetas, ventanas y componentes
+
     titleLarge = TextStyle(
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.SemiBold,
@@ -74,7 +74,7 @@ val TipografiaRinconSur = Typography(
         lineHeight = 20.sp
     ),
 
-    // Textos de párrafos y descripciones
+
     bodyLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
@@ -94,7 +94,7 @@ val TipografiaRinconSur = Typography(
         lineHeight = 16.sp
     ),
 
-    // Botones, etiquetas, chips y navegación
+
     labelLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,

@@ -3,7 +3,7 @@
 <resources>
     <string name="app_name">rinconSur</string>
 
-    <!-- PANTALLA 1: FORMULARIO-->
+
     <string name="cd_logo">Logo de Rincón Sur</string>
 
     <string name="mini_titulo">Rincón Sur</string>
@@ -14,7 +14,7 @@
     <string name="campo_olvide_contrasena">¿Olvidaste tu contraseña?</string>
     <string name="btn_ingresar">Rincón Sur</string>
 
-    <!-- PANTALLA 2: PERFIL -->
+
 
     <string name="rotulo_rincon_sur">RINCÓN SUR</string>
     <string name="titulo_perfil">Perfil</string>
@@ -38,13 +38,12 @@
 
     <string name="saludo">Hola, %1$s</string>
 
-    <!-- Menu de abajo -->
     <string name="menu_inicio">Inicio</string>
     <string name="menu_sesiones">Sesiones</string>
     <string name="menu_analitica">Analitica</string>
     <string name="menu_perfil">perfil</string>
 
-    <!-- Descripciones para accesibilidad (TalkBack) -->
+
     <string name="cd_volver">Volver</string>
     <string name="cd_volver_inicio">Volver al inicio</string>
     <string name="cd_procesar">Procesar</string>

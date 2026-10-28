@@ -246,7 +246,7 @@ class UsuarioDbHelper (context: Context):
         return filasAfectadas > 0
     }
 
-    // ---------- Equipo (colaboradores) ----------
+
 
     private fun colaboradorDe(c: Cursor): Colaborador {
         val perfil = Perfiles.deCodigo(c.getString(4))
@@ -294,7 +294,7 @@ class UsuarioDbHelper (context: Context):
         return r
     }
 
-    /** Verdad en BD: el correo existe, está activo y es ADMIN. */
+
     fun esAdminActivo(correo: String): Boolean {
         val c = readableDatabase.rawQuery(
             "SELECT 1 FROM $TABLA_USUARIOS WHERE LOWER(TRIM($USU_CORREO)) = LOWER(TRIM(?)) AND $USU_ROL = ? AND $USU_ACTIVO = 1",
@@ -322,7 +322,7 @@ class UsuarioDbHelper (context: Context):
         return r
     }
 
-    /** Correo ocupado por cualquier persona, activa o no (el UNIQUE aplica a todas). */
+
     fun existeCorreoRegistrado(correo: String): Boolean {
         val c = readableDatabase.rawQuery(
             "SELECT 1 FROM $TABLA_USUARIOS WHERE LOWER(TRIM($USU_CORREO)) = LOWER(TRIM(?))",

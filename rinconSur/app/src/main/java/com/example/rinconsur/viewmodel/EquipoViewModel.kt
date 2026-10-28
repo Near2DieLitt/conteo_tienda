@@ -44,7 +44,7 @@ data class ErroresColaborador(
     val hayErrores get() = nombre != null || correo != null || rut != null
 }
 
-/** Validaciones puras (sin Android ni UI) para el formulario de nueva persona. */
+
 object ValidadorColaborador {
     const val DOMINIO = "@rinconsur.cl"
 
@@ -121,7 +121,7 @@ class EquipoViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    /** Cada acción que modifica datos vuelve a consultar en la BD si quien actúa es admin activo. */
+
     private fun autorizado(): Boolean {
         val ok = db.esAdminActivo(correoActual)
         if (!ok) {
@@ -136,7 +136,7 @@ class EquipoViewModel(application: Application) : AndroidViewModel(application) 
     fun cerrarCredencial() = _uiState.update { it.copy(credencial = null) }
     fun limpiarErrores() = _uiState.update { it.copy(errores = ErroresColaborador()) }
 
-    /** Valida un campo mientras se escribe (para retroalimentación por campo). */
+
     fun validarCampo(campo: String, valor: String) {
         _uiState.update {
             val e = it.errores

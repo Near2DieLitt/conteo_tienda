@@ -36,7 +36,7 @@ object Fechas {
 
     fun inicioSemana(texto: String): String {
         val c = deTexto(texto)
-        val desfase = (c.get(Calendar.DAY_OF_WEEK) + 5) % 7 // lunes = 0
+        val desfase = (c.get(Calendar.DAY_OF_WEEK) + 5) % 7
         c.add(Calendar.DAY_OF_MONTH, -desfase)
         return aTexto(c)
     }

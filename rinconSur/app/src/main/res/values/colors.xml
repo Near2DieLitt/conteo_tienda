@@ -13,5 +13,5 @@
 
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="sombra_imagen">#B3000000</color> <!-- Negro al 70 % de opacidad -->
+    <color name="sombra_imagen">#B3000000</color>
 </resources>
