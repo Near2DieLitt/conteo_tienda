@@ -219,7 +219,7 @@ fun TarjetaVisitantesTienda(
                         ) {
                             Icon(Icons.Outlined.PersonAdd, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("+ Visitante", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Visitante", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
 
                         OutlinedButton(
@@ -230,7 +230,7 @@ fun TarjetaVisitantesTienda(
                         ) {
                             Icon(Icons.Outlined.PersonRemove, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("- Visitante", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Visitante", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 

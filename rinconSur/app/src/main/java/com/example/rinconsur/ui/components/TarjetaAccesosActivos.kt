@@ -65,11 +65,6 @@ fun TarjetaAccesosActivos(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(
-                                selected = false,
-                                onClick = { },
-                                colors = RadioButtonDefaults.colors(unselectedColor = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray)
-                            )
                             Column {
                                 Text("Flujo general", fontWeight = FontWeight.Bold, color = verdeResaltado)
                                 Text("Actualizado hace 2 min", fontSize = 11.sp, color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray)

@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.rinconsur.R
+import com.example.rinconsur.data.Fechas
 import com.example.rinconsur.model.RolUsuario
 import com.example.rinconsur.ui.components.BarraNavegacionInferior
 import com.example.rinconsur.ui.components.DestinoBarra
@@ -128,7 +129,7 @@ fun MenuPrincipalScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "MARTES, 15 DE SEPTIEMBRE",
+                            text = "${Fechas.fechaLarga(Fechas.hoy())}",
                             style = MaterialTheme.typography.labelSmall,
                             color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray,
                             fontWeight = FontWeight.Bold
@@ -192,25 +193,6 @@ fun MenuPrincipalScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-
-            OutlinedTextField(
-                value = state.busqueda,
-                onValueChange = { viewModel.actualizarBusqueda(it) },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Buscar acceso o sesión", color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray) },
-                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray) },
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = if (modoOscuro) Color(0xFF163E45) else Color.White,
-                    unfocusedContainerColor = if (modoOscuro) Color(0xFF163E45) else Color.White,
-                    focusedTextColor = if (modoOscuro) Color.White else Color(0xFF1E2D31),
-                    unfocusedTextColor = if (modoOscuro) Color.White else Color(0xFF1E2D31),
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent
-                ),
-                singleLine = true
-            )
 
             Spacer(modifier = Modifier.height(16.dp))
 

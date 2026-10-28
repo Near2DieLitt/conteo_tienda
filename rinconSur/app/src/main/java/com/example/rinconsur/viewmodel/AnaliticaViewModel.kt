@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.Calendar
-import kotlin.math.roundToInt
 import kotlin.random.Random
 
 data class FormFlujoState(
@@ -37,8 +36,6 @@ data class AnaliticaUiState(
     val acceso: String? = null,
     val modoComparar: Int = 0,
     val resumen: ResumenFlujo = ResumenFlujo(),
-    val crecimiento: Float? = null,
-    val duracionPromedioMin: Int? = null,
     val cantidadSesiones: Int = 0,
     val porAcceso: Map<String, ResumenFlujo> = emptyMap(),
     val registros: List<RegistroFlujo> = emptyList(),
@@ -108,12 +105,6 @@ class AnaliticaViewModel(application: Application) : AndroidViewModel(applicatio
         return Fechas.aTexto(c)
     }
 
-    private fun diasEntre(desde: String, hasta: String): Int {
-        val a = Fechas.deTexto(desde).timeInMillis
-        val b = Fechas.deTexto(hasta).timeInMillis
-        return ((b - a) / 86_400_000.0).roundToInt() + 1
-    }
-
     private fun rango(s: AnaliticaUiState): Pair<String, String> {
         val hoy = Fechas.hoy()
         return when (s.periodo) {
@@ -123,46 +114,16 @@ class AnaliticaViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private fun aMinutos(hora: String): Int? {
-        val p = hora.split(":")
-        if (p.size != 2) return null
-        val h = p[0].trim().toIntOrNull() ?: return null
-        val m = p[1].trim().toIntOrNull() ?: return null
-        return h * 60 + m
-    }
-
-    private fun duracionMinutos(horario: String): Int? {
-        val partes = horario.split("–", "-").map { it.trim() }
-        if (partes.size != 2) return null
-        val inicio = aMinutos(partes[0]) ?: return null
-        val fin = aMinutos(partes[1]) ?: return null
-        return if (fin > inicio) fin - inicio else null
-    }
-
     private fun recargar() {
         val s = _uiState.value
         val (desde, hasta) = rango(s)
-
-        val dias = diasEntre(desde, hasta)
-        val previoHasta = sumarDias(desde, -1)
-        val previoDesde = sumarDias(previoHasta, -(dias - 1))
-
         val actual = db.obtenerResumenFlujo(desde, hasta, s.acceso)
-        val previo = db.obtenerResumenFlujo(previoDesde, previoHasta, s.acceso)
-        val crecimiento = if (previo.ingresos == 0) null
-        else (actual.ingresos - previo.ingresos) * 100f / previo.ingresos
-
-        val duraciones = db.obtenerHorariosConteos(desde, hasta, s.acceso)
-            .mapNotNull { duracionMinutos(it) }
-        val promedio = if (duraciones.isEmpty()) null else duraciones.average().roundToInt()
 
         _uiState.update {
             it.copy(
                 rangoDesde = desde,
                 rangoHasta = hasta,
                 resumen = actual,
-                crecimiento = crecimiento,
-                duracionPromedioMin = promedio,
                 cantidadSesiones = db.contarSesiones(desde, hasta, s.acceso),
                 porAcceso = db.obtenerFlujoPorAcceso(desde, hasta),
                 registros = db.obtenerRegistrosFlujo(desde, hasta, s.acceso, puedeEditar, 8)
