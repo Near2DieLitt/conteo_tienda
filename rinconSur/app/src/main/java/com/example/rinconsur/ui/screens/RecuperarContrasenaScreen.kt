@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -46,6 +47,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.rinconsur.R
 import com.example.rinconsur.ui.components.RinconSurCampoTexto
 import com.example.rinconsur.ui.styles.BotonPrincipalAnchoCompleto
 import com.example.rinconsur.ui.styles.TarjetaDestacada
@@ -119,7 +121,7 @@ fun RecuperarContrasenaScreen(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.ArrowBack,
-                    contentDescription = "Volver",
+                    stringResource(R.string.cd_volver),
                     tint = if (modoOscuro) Color.White else MaterialTheme.colorScheme.primary
                 )
             }

@@ -15,11 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.rinconsur.R
 import com.example.rinconsur.model.RolUsuario
 import com.example.rinconsur.ui.components.BarraNavegacionInferior
 import com.example.rinconsur.ui.components.DestinoBarra
@@ -182,7 +184,7 @@ fun MenuPrincipalScreen(
                     ) {
                         Icon(
                             imageVector = if (modoOscuro) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                            contentDescription = "Tema",
+                            stringResource(R.string.desc_cambiar_tema),
                             tint = if (modoOscuro) Color.White else verdeResaltado
                         )
                     }

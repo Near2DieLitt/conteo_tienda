@@ -42,11 +42,23 @@
     <string name="menu_analitica">Analitica</string>
     <string name="menu_perfil">perfil</string>
 
-    <!-- Descripciones para accesibilidad (talback) -->
+    <!-- Descripciones para accesibilidad (TalkBack) -->
+    <string name="cd_volver">Volver</string>
+    <string name="cd_volver_inicio">Volver al inicio</string>
+    <string name="cd_procesar">Procesar</string>
+    <string name="cd_ir">Ir</string>
+    <string name="cd_mes_anterior">Mes anterior</string>
+    <string name="cd_mes_siguiente">Mes siguiente</string>
+    <string name="cd_opciones">Opciones</string>
+    <string name="cd_agregar_persona">Agregar persona</string>
+    <string name="cd_error">Error</string>
+    <string name="cd_mostrar_contrasena">Mostrar contraseña</string>
+    <string name="cd_ocultar_contrasena">Ocultar contraseña</string>
+    <string name="cd_modo_claro">Activar modo claro</string>
+    <string name="cd_modo_oscuro">Activar modo oscuro</string>
+    <string name="cd_deshabilitar_conteo">Deshabilitar conteo</string>
+    <string name="cd_habilitar_conteo">Habilitar conteo</string>
+    <string name="cd_deshabilitar_registro">Deshabilitar registro</string>
+    <string name="cd_habilitar_registro">Habilitar registro</string>
 
 </resources>
-
-
-
-
-

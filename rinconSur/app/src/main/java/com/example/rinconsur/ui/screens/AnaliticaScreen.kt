@@ -222,7 +222,7 @@ fun AnaliticaScreen(
                             IconButton(onClick = { menuAbierto = true }, enabled = puedeEditar) {
                                 Icon(
                                     Icons.Outlined.MoreHoriz,
-                                    contentDescription = "Opciones",
+                                    stringResource(R.string.cd_opciones),
                                     tint = (if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario).copy(alpha = if (puedeEditar) 1f else 0.4f)
                                 )
                             }
@@ -845,7 +845,7 @@ private fun FilaRegistro(
         ) {
             Icon(
                 imageVector = if (registro.activo) Icons.Outlined.Block else Icons.Outlined.Restore,
-                contentDescription = if (registro.activo) "Deshabilitar registro" else "Habilitar registro",
+                if (registro.activo) stringResource(R.string.cd_deshabilitar_registro) else stringResource(R.string.cd_habilitar_registro),
                 tint = (if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario).copy(alpha = if (puedeEditar) 1f else 0.4f),
                 modifier = Modifier.size(18.dp)
             )
@@ -937,7 +937,7 @@ private fun DialogoRegistroFlujo(
                         leadingIcon = { Icon(Icons.Outlined.CalendarToday, contentDescription = null) },
                         trailingIcon = {
                             if (errorFecha != null) {
-                                Icon(Icons.Outlined.ErrorOutline, contentDescription = "Error", tint = Error)
+                                Icon(Icons.Outlined.ErrorOutline, stringResource(R.string.cd_error), tint = Error)
                             }
                         },
                         isError = errorFecha != null,
@@ -1034,7 +1034,7 @@ private fun CampoNumero(
         leadingIcon = { Icon(icono, contentDescription = null) },
         trailingIcon = {
             if (error != null) {
-                Icon(Icons.Outlined.ErrorOutline, contentDescription = "Error", tint = Error)
+                Icon(Icons.Outlined.ErrorOutline,stringResource(R.string.cd_error), tint = Error)
             }
         },
         isError = error != null,

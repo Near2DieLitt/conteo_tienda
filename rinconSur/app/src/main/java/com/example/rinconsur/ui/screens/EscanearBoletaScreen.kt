@@ -275,7 +275,7 @@ fun EscanearBoletaScreen(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.Send,
-                        contentDescription = stringResource(R.string.cd_p),
+                        stringResource(R.string.cd_procesar),
                         tint = Color.White
                     )
                 }

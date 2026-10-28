@@ -148,7 +148,8 @@ fun EquipoScreen(
                     containerColor = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800,
                     contentColor = Color.White,
                     shape = CircleShape
-                ) { Icon(Icons.Filled.Add, contentDescription = "Agregar persona") }
+                ) { Icon(Icons.Filled.Add,
+                    stringResource(R.string.cd_agregar_persona) )}
             }
         },
         bottomBar = {
@@ -356,7 +357,7 @@ private fun TarjetaColaborador(
                 IconButton(onClick = { menuAbierto = true }, enabled = puedeEditar) {
                     Icon(
                         Icons.Outlined.MoreVert,
-                        contentDescription = "Opciones",
+                        stringResource(R.string.cd_opciones),
                         tint = (if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario).copy(alpha = if (puedeEditar) 1f else 0.35f)
                     )
                 }
@@ -419,7 +420,7 @@ private fun DialogoNuevaPersona(
             placeholder = if (placeholder != null) ({ Text(placeholder) }) else null,
             leadingIcon = { Icon(icono, contentDescription = null) },
             trailingIcon = {
-                if (error != null) Icon(Icons.Outlined.ErrorOutline, contentDescription = "Error", tint = Error)
+                if (error != null) Icon(Icons.Outlined.ErrorOutline,stringResource(R.string.cd_error), tint = Error)
             },
             isError = error != null,
             supportingText = { error?.let { Text(it, color = Error) } },

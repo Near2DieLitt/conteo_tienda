@@ -44,6 +44,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.rinconsur.R
 import com.example.rinconsur.model.RolUsuario
 import com.example.rinconsur.ui.components.RinconSurCampoTexto
 import com.example.rinconsur.ui.theme.Dimens
@@ -252,9 +254,9 @@ fun LoginScreen(
                                 },
                             contentDescription =
                                 if (contrasenaVisible) {
-                                    "Ocultar contraseña"
+                                    stringResource(R.string.cd_ocultar_contrasena)
                                 } else {
-                                    "Mostrar contraseña"
+                                    stringResource(R.string.cd_mostrar_contrasena)
                                 }
                         )
                     }
@@ -370,9 +372,9 @@ fun LoginScreen(
                     },
                 contentDescription =
                     if (modoOscuro) {
-                        "Activar modo claro"
+                        stringResource(R.string.cd_modo_claro)
                     } else {
-                        "Activar modo oscuro"
+                        stringResource(R.string.cd_modo_oscuro)
                     },
                 tint = if (modoOscuro) Color.White else MaterialTheme.colorScheme.primary
             )

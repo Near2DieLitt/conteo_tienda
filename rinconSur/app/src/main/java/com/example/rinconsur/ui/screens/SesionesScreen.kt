@@ -217,7 +217,8 @@ fun SesionesScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { viewModel.cambiarMes(-1) }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Mes anterior", tint = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
+                            Icon(Icons.Outlined.ChevronLeft,
+                                stringResource(R.string.cd_mes_anterior), tint = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
                         }
                         Text(
                             text = "${Fechas.meses[state.mesVisible]} ${state.aniosVisible}",
@@ -228,7 +229,8 @@ fun SesionesScreen(
                             color = if (modoOscuro) Color.White else Petroleo800
                         )
                         IconButton(onClick = { viewModel.cambiarMes(1) }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Outlined.ChevronRight, contentDescription = "Mes siguiente", tint = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
+                            Icon(Icons.Outlined.ChevronRight,
+                                stringResource(R.string.cd_mes_siguiente), tint = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
                         }
                     }
 
@@ -454,7 +456,8 @@ private fun TarjetaSesion(
                 if (puedeEditar) {
                     Box {
                         IconButton(onClick = { menuAbierto = true }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Outlined.MoreHoriz, contentDescription = "Opciones", tint = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
+                            Icon(Icons.Outlined.MoreHoriz,
+                                stringResource(R.string.cd_opciones), tint = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
                         }
                         DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
                             if (sesion.activo) {
@@ -559,7 +562,7 @@ private fun TarjetaSesion(
                         ) {
                             Icon(
                                 imageVector = if (conteo.activo) Icons.Outlined.Block else Icons.Outlined.Restore,
-                                contentDescription = if (conteo.activo) "Deshabilitar conteo" else "Habilitar conteo",
+                                if (conteo.activo) stringResource(R.string.cd_deshabilitar_conteo) else stringResource(R.string.cd_habilitar_conteo),
                                 tint = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario,
                                 modifier = Modifier.size(16.dp)
                             )

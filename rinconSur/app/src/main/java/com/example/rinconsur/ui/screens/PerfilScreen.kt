@@ -203,7 +203,7 @@ fun PerfilScreen(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.ArrowBack,
-                    contentDescription = "Volver al inicio",
+                    stringResource(R.string.cd_volver_inicio),
                     tint = if (modoOscuro) Color.White else Petroleo800
                 )
             }
