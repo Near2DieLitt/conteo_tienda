@@ -30,12 +30,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.rinconsur.R
 import com.example.rinconsur.data.UsuarioDbHelper
 import com.example.rinconsur.model.ResultadoBoleta
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -45,9 +47,11 @@ import com.example.rinconsur.data.SesionPreferencias
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 
+
 @OptIn(ExperimentalGetImage::class)
 @Composable
 fun EscanearBoletaScreen(
+    correoUsuario: String,
     onVolver: () -> Unit
 ) {
     val context = LocalContext.current
@@ -82,8 +86,10 @@ fun EscanearBoletaScreen(
 
     fun procesarCodigo(codigo: String) {
         codigoDetectado = codigo
-        val entradaActiva = sesionPrefs.obtenerEntradaActiva()
-        resultadoBoleta = dbHelper.procesarBoleta(codigo, accesoActivo = entradaActiva)
+        val entradaActiva = sesionPrefs.obtenerEntradaActiva(correoUsuario)
+        val idUsuario = dbHelper.obtenerUsuarioPorCorreo(correoUsuario)?.id?.toLong()
+        val idSesion = entradaActiva?.let { dbHelper.obtenerIdSesionActiva(it, idUsuario) }
+        resultadoBoleta = dbHelper.procesarBoleta(codigo, accesoActivo = entradaActiva, idSesion = idSesion)
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
@@ -218,7 +224,7 @@ fun EscanearBoletaScreen(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Volver",
+                    contentDescription = stringResource(R.string.cd_volver),
                     tint = Color.White
                 )
             }
@@ -269,7 +275,7 @@ fun EscanearBoletaScreen(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.Send,
-                        contentDescription = "Procesar",
+                        contentDescription = stringResource(R.string.cd_p),
                         tint = Color.White
                     )
                 }

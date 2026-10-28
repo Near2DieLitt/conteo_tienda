@@ -25,7 +25,7 @@ class UsuarioDbHelper (context: Context):
     SQLiteOpenHelper(context, NOMBRE_BD, null, VERSION_BD){
     companion object{
         private const val NOMBRE_BD = "rinconsur.db"
-        private const val VERSION_BD = 8
+        private const val VERSION_BD = 11
 
         private const val TABLA_USUARIOS = "usuarios"
         private const val USU_ID = "id_usuario"
@@ -76,7 +76,9 @@ class UsuarioDbHelper (context: Context):
                 codigo VARCHAR(50) NOT NULL,
                 nombre VARCHAR(100) NOT NULL,
                 fecha VARCHAR(20) NOT NULL,
-                activo INTEGER NOT NULL DEFAULT 1
+                activo INTEGER NOT NULL DEFAULT 1,
+                id_usuario INTEGER,
+                FOREIGN KEY(id_usuario) REFERENCES $TABLA_USUARIOS($USU_ID)
             )
         """.trimIndent()
         db.execSQL(crearTablaSesiones)
@@ -104,7 +106,9 @@ class UsuarioDbHelper (context: Context):
                 transito_joven INTEGER NOT NULL,
                 transito_adulto INTEGER NOT NULL,
                 transito_mayor INTEGER NOT NULL,
-                activo INTEGER NOT NULL DEFAULT 1
+                activo INTEGER NOT NULL DEFAULT 1,
+                id_sesion INTEGER,
+                FOREIGN KEY(id_sesion) REFERENCES $TABLA_SESIONES(id_sesion)
             )
         """.trimIndent()
         db.execSQL(crearTablaFlujo)
@@ -115,7 +119,9 @@ class UsuarioDbHelper (context: Context):
                 fecha VARCHAR(20) NOT NULL,
                 hora VARCHAR(20) NOT NULL,
                 estado VARCHAR(50) NOT NULL,
-                boleta VARCHAR(50)
+                boleta VARCHAR(50),
+                id_sesion INTEGER,
+                FOREIGN KEY(id_sesion) REFERENCES $TABLA_SESIONES(id_sesion)
             )
         """.trimIndent()
         db.execSQL(crearTablaVisitantes)
@@ -370,12 +376,12 @@ class UsuarioDbHelper (context: Context):
         return lista
     }
 
-    fun insertarSesion(codigo: String, nombre: String, fecha: String, usuarioAsignado: String? = null): Long {
+    fun insertarSesion(codigo: String, nombre: String, fecha: String, idUsuario: Long? = null): Long {
         val valores = ContentValues().apply {
             put("codigo", codigo)
             put("nombre", nombre)
             put("fecha", fecha)
-            put("usuario_asignado", usuarioAsignado)
+            if (idUsuario != null) put("id_usuario", idUsuario) else putNull("id_usuario")
             put("activo", 1)
         }
         return writableDatabase.insert(TABLA_SESIONES, null, valores)
@@ -433,18 +439,19 @@ class UsuarioDbHelper (context: Context):
         writableDatabase.update(TABLA_CONTEOS, valores, "id_conteo = ?", arrayOf(idConteo.toString()))
     }
 
-    fun obtenerSesiones(desde: String, hasta: String, incluirInactivas: Boolean, correoUsuario: String? = null): List<SesionAcceso> {
+    fun obtenerSesiones(desde: String, hasta: String, incluirInactivas: Boolean, idUsuario: Long? = null): List<SesionAcceso> {
         val db = readableDatabase
         val lista = mutableListOf<SesionAcceso>()
         val filtroActivo = if (incluirInactivas) "" else " AND s.activo = 1"
-        val filtroUsuario = if (!correoUsuario.isNullOrBlank()) " AND (s.usuario_asignado IS NULL OR s.usuario_asignado = '' OR LOWER(TRIM(s.usuario_asignado)) = LOWER(TRIM('$correoUsuario')))" else ""
+        val filtroUsuario = if (idUsuario != null) " AND s.id_usuario = ?" else ""
 
-        val sql = "SELECT s.id_sesion, s.codigo, s.nombre, s.fecha, s.activo, COALESCE(u.$USU_NOMBRE, s.usuario_asignado) " +
+        val sql = "SELECT s.id_sesion, s.codigo, s.nombre, s.fecha, s.activo, u.$USU_NOMBRE " +
                 "FROM $TABLA_SESIONES s " +
-                "LEFT JOIN $TABLA_USUARIOS u ON LOWER(TRIM(u.$USU_CORREO)) = LOWER(TRIM(s.usuario_asignado)) " +
+                "LEFT JOIN $TABLA_USUARIOS u ON u.$USU_ID = s.id_usuario " +
                 "WHERE s.fecha BETWEEN ? AND ?$filtroActivo$filtroUsuario ORDER BY s.fecha DESC, s.id_sesion ASC"
+        val args = if (idUsuario != null) arrayOf(desde, hasta, idUsuario.toString()) else arrayOf(desde, hasta)
 
-        db.rawQuery(sql, arrayOf(desde, hasta)).use { c ->
+        db.rawQuery(sql, args).use { c ->
             while (c.moveToNext()) {
                 val id = c.getLong(0)
                 val codigo = c.getString(1)
@@ -644,30 +651,30 @@ class UsuarioDbHelper (context: Context):
         }
         return lista
     }
-    fun registrarEntradaVisitante(fecha: String = Fechas.hoy()): Long {
+    fun registrarEntradaVisitante(idSesion: Long?, fecha: String = Fechas.hoy()): Long {
         val hora = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
         val valores = ContentValues().apply {
             put("fecha", fecha)
             put("hora", hora)
             put("estado", "En_Tienda")
+            if (idSesion != null) put("id_sesion", idSesion) else putNull("id_sesion")
         }
         return writableDatabase.insert(TABLA_VISITANTES, null, valores)
     }
 
-    fun registrarSalidaVisitanteSinCompra(fecha: String = Fechas.hoy()): Boolean {
-        val db = writableDatabase
-        var idVisitante: Long? = null
-
-        val cursor = db.rawQuery(
-            "SELECT id_visitante FROM $TABLA_VISITANTES " +
-                    "WHERE fecha = ? AND estado = 'En_Tienda' " +
+    private fun primerVisitanteEnTienda(db: SQLiteDatabase, fecha: String, idSesion: Long?): Long? {
+        val filtro = if (idSesion != null) " AND id_sesion = ?" else " AND id_sesion IS NULL"
+        val args = if (idSesion != null) arrayOf(fecha, idSesion.toString()) else arrayOf(fecha)
+        return db.rawQuery(
+            "SELECT id_visitante FROM $TABLA_VISITANTES WHERE fecha = ? AND estado = 'En_Tienda'$filtro " +
                     "ORDER BY id_visitante ASC LIMIT 1",
-            arrayOf(fecha)
-        )
-        if (cursor.moveToFirst()) {
-            idVisitante = cursor.getLong(0)
-        }
-        cursor.close()
+            args
+        ).use { c -> if (c.moveToFirst()) c.getLong(0) else null }
+    }
+
+    fun registrarSalidaVisitanteSinCompra(idSesion: Long?, fecha: String = Fechas.hoy()): Boolean {
+        val db = writableDatabase
+        val idVisitante: Long? = primerVisitanteEnTienda(db, fecha, idSesion)
 
         return if (idVisitante != null) {
             val valores = ContentValues().apply {
@@ -704,7 +711,8 @@ class UsuarioDbHelper (context: Context):
     fun procesarBoleta(
         folio: String,
         accesoActivo: String? = null,
-        fecha: String = Fechas.hoy()
+        fecha: String = Fechas.hoy(),
+        idSesion: Long? = null
     ): ResultadoBoleta {
         val folioLimpio = folio.trim()
 
@@ -717,18 +725,7 @@ class UsuarioDbHelper (context: Context):
         }
 
         val db = writableDatabase
-        var idVisitante: Long? = null
-
-        val cursor = db.rawQuery(
-            "SELECT id_visitante FROM $TABLA_VISITANTES " +
-                    "WHERE fecha = ? AND estado = 'En_Tienda' " +
-                    "ORDER BY id_visitante ASC LIMIT 1",
-            arrayOf(fecha)
-        )
-        if (cursor.moveToFirst()) {
-            idVisitante = cursor.getLong(0)
-        }
-        cursor.close()
+        val idVisitante: Long? = primerVisitanteEnTienda(db, fecha, idSesion)
 
         if (idVisitante == null) {
             return ResultadoBoleta.SinVisitanteActivo
@@ -764,23 +761,27 @@ class UsuarioDbHelper (context: Context):
                 acceso = accesoActivo,
                 fecha = fecha,
                 deltaIngresos = 0,
-                deltaCompradores = 1
+                deltaCompradores = 1,
+                idSesion = idSesion
             )
         }
 
         return ResultadoBoleta.Exito(idVisitante, folioLimpio)
     }
 
-    fun obtenerSesionesActivasEntrada(fecha: String = Fechas.hoy(), correoUsuario: String? = null): List<SesionAcceso> {
+    fun obtenerSesionesActivasEntrada(fecha: String = Fechas.hoy(), idUsuario: Long? = null): List<SesionAcceso> {
         val db = readableDatabase
         val lista = mutableListOf<SesionAcceso>()
-        val filtroUsuario = if (!correoUsuario.isNullOrBlank()) " AND (usuario_asignado IS NULL OR usuario_asignado = '' OR LOWER(TRIM(usuario_asignado)) = LOWER(TRIM('$correoUsuario')))" else ""
+        val filtroUsuario = if (idUsuario != null) " AND s.id_usuario = ?" else ""
+        val args = if (idUsuario != null) arrayOf(fecha, idUsuario.toString()) else arrayOf(fecha)
 
         db.rawQuery(
-            "SELECT id_sesion, codigo, nombre, fecha, activo, usuario_asignado FROM $TABLA_SESIONES " +
-                    "WHERE fecha = ? AND activo = 1 AND UPPER(codigo) IN ('A1', 'A2', 'A3', 'A4')$filtroUsuario " +
-                    "ORDER BY id_sesion DESC",
-            arrayOf(fecha)
+            "SELECT s.id_sesion, s.codigo, s.nombre, s.fecha, s.activo, u.$USU_NOMBRE " +
+                    "FROM $TABLA_SESIONES s " +
+                    "LEFT JOIN $TABLA_USUARIOS u ON u.$USU_ID = s.id_usuario " +
+                    "WHERE s.fecha = ? AND s.activo = 1 AND UPPER(s.codigo) IN ('A1', 'A2', 'A3', 'A4')$filtroUsuario " +
+                    "ORDER BY s.id_sesion DESC",
+            args
         ).use { c ->
             while (c.moveToNext()) {
                 val id = c.getLong(0)
@@ -799,18 +800,32 @@ class UsuarioDbHelper (context: Context):
         }
         return lista
     }
+    fun obtenerIdSesionActiva(codigo: String, idUsuario: Long?, fecha: String = Fechas.hoy()): Long? =
+        obtenerSesionesActivasEntrada(fecha, idUsuario)
+            .firstOrNull { it.codigo.equals(codigo, ignoreCase = true) }?.id
+
+    fun obtenerIngresosRegistradosUsuario(idUsuario: Long): Int =
+        readableDatabase.rawQuery(
+            "SELECT COALESCE(SUM(f.ingresos),0) FROM $TABLA_FLUJO f " +
+                    "INNER JOIN $TABLA_SESIONES s ON f.id_sesion = s.id_sesion WHERE s.id_usuario = ?",
+            arrayOf(idUsuario.toString())
+        ).use { c -> if (c.moveToFirst()) c.getInt(0) else 0 }
+
     fun registrarOActualizarFlujo(
         acceso: String,
         fecha: String = Fechas.hoy(),
         deltaIngresos: Int = 0,
         deltaCompradores: Int = 0,
-        rangoEtario: RangoEtario = RangoEtario.ADULTO
+        rangoEtario: RangoEtario = RangoEtario.ADULTO,
+        idSesion: Long? = null
     ) {
         val db = writableDatabase
+        val filtroSesion = if (idSesion != null) " AND id_sesion = ?" else ""
+        val argsFlujo = if (idSesion != null) arrayOf(fecha, acceso, idSesion.toString()) else arrayOf(fecha, acceso)
         val cursor = db.rawQuery(
             "SELECT id_registro, ingresos, compradores, transito_joven, transito_adulto, transito_mayor " +
-                    "FROM $TABLA_FLUJO WHERE fecha = ? AND acceso = ? AND activo = 1 LIMIT 1",
-            arrayOf(fecha, acceso)
+                    "FROM $TABLA_FLUJO WHERE fecha = ? AND acceso = ? AND activo = 1$filtroSesion LIMIT 1",
+            argsFlujo
         )
         if (cursor.moveToFirst()) {
             val id = cursor.getLong(0)
@@ -858,21 +873,24 @@ class UsuarioDbHelper (context: Context):
                 put("transito_adulto", adulto)
                 put("transito_mayor", mayor)
                 put("activo", 1)
+                if (idSesion != null) put("id_sesion", idSesion)
             }
             db.insert(TABLA_FLUJO, null, valores)
         }
         cursor.close()
     }
 
-    fun obtenerResumenVisitantes(fecha: String = Fechas.hoy()): ResumenVisitantes {
+    fun obtenerResumenVisitantes(idSesion: Long?, fecha: String = Fechas.hoy()): ResumenVisitantes {
         val db = readableDatabase
         var enTienda = 0
         var compro = 0
         var noCompro = 0
 
+        val filtroSesion = if (idSesion != null) " AND id_sesion = ?" else " AND id_sesion IS NULL"
+        val argsSesion = if (idSesion != null) arrayOf(fecha, idSesion.toString()) else arrayOf(fecha)
         val cursor = db.rawQuery(
-            "SELECT estado, COUNT(*) FROM $TABLA_VISITANTES WHERE fecha = ? GROUP BY estado",
-            arrayOf(fecha)
+            "SELECT estado, COUNT(*) FROM $TABLA_VISITANTES WHERE fecha = ?$filtroSesion GROUP BY estado",
+            argsSesion
         )
         while (cursor.moveToNext()) {
             val estado = cursor.getString(0)
@@ -889,7 +907,7 @@ class UsuarioDbHelper (context: Context):
         return ResumenVisitantes(enTienda, compro, noCompro, total)
     }
 
-    fun ejecutarCierreDiario(fecha: String = Fechas.hoy()): Int {
+    fun ejecutarCierreDiario(idSesion: Long?, fecha: String = Fechas.hoy()): Int {
         val db = writableDatabase
         val valores = ContentValues().apply {
             put("estado", "No_Compro")
@@ -897,8 +915,9 @@ class UsuarioDbHelper (context: Context):
         return db.update(
             TABLA_VISITANTES,
             valores,
-            "fecha = ? AND estado = 'En_Tienda'",
-            arrayOf(fecha)
+            "fecha = ? AND estado = 'En_Tienda'" +
+                    (if (idSesion != null) " AND id_sesion = ?" else " AND id_sesion IS NULL"),
+            if (idSesion != null) arrayOf(fecha, idSesion.toString()) else arrayOf(fecha)
         )
     }
 }

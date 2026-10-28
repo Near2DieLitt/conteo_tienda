@@ -97,7 +97,8 @@ class SesionesViewModel (application: Application): AndroidViewModel(application
 
         val fecha = _uiState.value.fechaSeleccionada
         if (fecha < Fechas.hoy()) return false
-        db.insertarSesion(codigoLimpio, nombre.trim(), fecha, usuarioAsignado)
+        val idUsuario = usuarioAsignado?.let { db.obtenerUsuarioPorCorreo(it)?.id?.toLong() }
+        db.insertarSesion(codigoLimpio, nombre.trim(), fecha, idUsuario)
         recargar()
         return true
     }

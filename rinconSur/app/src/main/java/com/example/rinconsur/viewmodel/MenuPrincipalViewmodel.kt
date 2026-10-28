@@ -26,6 +26,7 @@ data class ItemSessionUi(
 data class MenuprincipalUiState(
     val nombreUsuario: String = "",
     val correoUsuario: String = "",
+    val idUsuario: Long = -1L,
     val rolUsuario: RolUsuario = RolUsuario.OBSERVADOR,
     val busqueda: String = "",
     val tabSeleccionada: Int = 0,
@@ -58,34 +59,38 @@ class MenuPrincipalViewmodel(application: Application) : AndroidViewModel(applic
 
     fun cargarSesionesEntrada(correoOverride: String? = null) {
         val correo = correoOverride ?: _uiState.value.correoUsuario
-        val esSupervisor = _uiState.value.rolUsuario == RolUsuario.SUPERVISOR
-        val correoFiltro = if (esSupervisor) null else correo
-
-        val sesionesActivas = dbHelper.obtenerSesionesActivasEntrada(Fechas.hoy(), correoFiltro)
-        var entrada = sesionPrefs.obtenerEntradaActiva()
+        val sesionesActivas = dbHelper.obtenerSesionesActivasEntrada(Fechas.hoy(), _uiState.value.idUsuario)
+        var entrada = sesionPrefs.obtenerEntradaActiva(correo)
 
         if (sesionesActivas.isNotEmpty()) {
             if (entrada == null || sesionesActivas.none { it.codigo.equals(entrada, ignoreCase = true) }) {
                 entrada = sesionesActivas.first().codigo
-                sesionPrefs.guardarEntradaActiva(entrada)
+                sesionPrefs.guardarEntradaActiva(correo, entrada)
             }
         } else {
             entrada = null
-            sesionPrefs.borrarEntradaActiva()
+            sesionPrefs.borrarEntradaActiva(correo)
         }
 
-        _uiState.update { 
+        _uiState.update {
             it.copy(
                 sesionesEntradaActivas = sesionesActivas,
                 entradaActiva = entrada
-            ) 
+            )
         }
+    }
+
+    fun refrescar() {
+        if (_uiState.value.idUsuario == -1L) return
+        cargarSesionesEntrada()
+        cargarSessiones()
+        cargarVisitantes()
     }
 
     fun seleccionarSesionEntrada(codigo: String) {
         val codigoLimpio = codigo.trim().uppercase()
         if (_uiState.value.entradasValidas.contains(codigoLimpio)) {
-            sesionPrefs.guardarEntradaActiva(codigoLimpio)
+            sesionPrefs.guardarEntradaActiva(_uiState.value.correoUsuario, codigoLimpio)
             _uiState.update { it.copy(entradaActiva = codigoLimpio) }
             cargarVisitantes()
         }
@@ -94,9 +99,11 @@ class MenuPrincipalViewmodel(application: Application) : AndroidViewModel(applic
     fun finalizarSesionEntrada() {
         val entrada = _uiState.value.entradaActiva
         if (!entrada.isNullOrBlank()) {
-            dbHelper.finalizarSesionPorCodigo(entrada, Fechas.hoy())
+            val idSesion = _uiState.value.sesionesEntradaActivas
+                .firstOrNull { it.codigo.equals(entrada, ignoreCase = true) }?.id
+            if (idSesion != null) dbHelper.finalizarSesion(idSesion)
         }
-        sesionPrefs.borrarEntradaActiva()
+        sesionPrefs.borrarEntradaActiva(_uiState.value.correoUsuario)
         _uiState.update { it.copy(entradaActiva = null) }
         cargarSesionesEntrada()
         cargarSessiones()
@@ -106,20 +113,22 @@ class MenuPrincipalViewmodel(application: Application) : AndroidViewModel(applic
     fun cargarDatosUsuarios(correo: String) {
         val usuario = dbHelper.obtenerUsuarioPorCorreo(correo)
         if (usuario != null) {
-            _uiState.update { 
+            _uiState.update {
                 it.copy(
                     nombreUsuario = usuario.nombre,
                     correoUsuario = usuario.correo,
+                    idUsuario = usuario.id.toLong(),
                     rolUsuario = usuario.rol
-                ) 
+                )
             }
         } else {
-            _uiState.update { 
+            _uiState.update {
                 it.copy(
                     nombreUsuario = "Usuario",
                     correoUsuario = correo,
+                    idUsuario = -1L,
                     rolUsuario = RolUsuario.OBSERVADOR
-                ) 
+                )
             }
         }
         cargarSesionesEntrada(correo)
@@ -127,27 +136,36 @@ class MenuPrincipalViewmodel(application: Application) : AndroidViewModel(applic
         cargarVisitantes()
     }
 
+    private fun idSesionActiva(): Long? {
+        val entrada = _uiState.value.entradaActiva ?: return null
+        return _uiState.value.sesionesEntradaActivas
+            .firstOrNull { it.codigo.equals(entrada, ignoreCase = true) }?.id
+    }
+
     fun cargarVisitantes() {
-        val resumen = dbHelper.obtenerResumenVisitantes()
+        val resumen = dbHelper.obtenerResumenVisitantes(idSesionActiva())
         _uiState.update { it.copy(resumenVisitantes = resumen) }
     }
 
     fun registrarEntradaVisitante(rangoEtario: RangoEtario = RangoEtario.ADULTO) {
-        dbHelper.registrarEntradaVisitante()
+        dbHelper.registrarEntradaVisitante(idSesionActiva())
         val acceso = _uiState.value.entradaActiva
         if (!acceso.isNullOrBlank()) {
+            val idSesion = _uiState.value.sesionesEntradaActivas
+                .firstOrNull { it.codigo.equals(acceso, ignoreCase = true) }?.id
             dbHelper.registrarOActualizarFlujo(
                 acceso = acceso,
                 deltaIngresos = 1,
                 deltaCompradores = 0,
-                rangoEtario = rangoEtario
+                rangoEtario = rangoEtario,
+                idSesion = idSesion
             )
         }
         cargarVisitantes()
     }
 
     fun registrarSalidaSinCompra() {
-        val exito = dbHelper.registrarSalidaVisitanteSinCompra()
+        val exito = dbHelper.registrarSalidaVisitanteSinCompra(idSesionActiva())
         if (!exito) {
             _uiState.update { it.copy(mensajeInformativo = "No hay visitantes activos con estado 'En_Tienda'.") }
         }
@@ -155,11 +173,11 @@ class MenuPrincipalViewmodel(application: Application) : AndroidViewModel(applic
     }
 
     fun ejecutarCierreDiario() {
-        val actualizados = dbHelper.ejecutarCierreDiario()
-        _uiState.update { 
+        val actualizados = dbHelper.ejecutarCierreDiario(idSesionActiva())
+        _uiState.update {
             it.copy(
                 mensajeInformativo = "Cierre diario ejecutado. $actualizados visitante(s) pasaron de 'En_Tienda' a 'No_Compro'."
-            ) 
+            )
         }
         cargarVisitantes()
     }
@@ -184,9 +202,7 @@ class MenuPrincipalViewmodel(application: Application) : AndroidViewModel(applic
         } else {
             Pair(sumarDias(hoy, 1), "2099-12-31")
         }
-        val esSupervisor = _uiState.value.rolUsuario == RolUsuario.SUPERVISOR
-        val correoFiltro = if (esSupervisor) null else _uiState.value.correoUsuario
-        val listaDb = dbHelper.obtenerSesiones(desde, hasta, incluirInactivas = true, correoUsuario = correoFiltro)
+        val listaDb = dbHelper.obtenerSesiones(desde, hasta, incluirInactivas = true, idUsuario = _uiState.value.idUsuario)
 
         val itemsMapped = listaDb.map { sesion ->
             val primerHorario = sesion.conteos.firstOrNull()?.horario ?: "Programada"

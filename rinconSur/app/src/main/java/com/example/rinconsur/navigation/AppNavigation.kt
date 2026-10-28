@@ -23,6 +23,7 @@ import com.example.rinconsur.ui.screens.AnaliticaScreen
 import com.example.rinconsur.ui.screens.EquipoScreen
 import com.example.rinconsur.ui.screens.EscanearBoletaScreen
 
+
 @Composable
 fun AppNavigation(
     modoOscuro: Boolean,
@@ -159,6 +160,7 @@ fun AppNavigation(
 
         composable(Rutas.EscanearBoleta.ruta) {
             EscanearBoletaScreen(
+                correoUsuario = correoLogueado,
                 onVolver = {
                     navController.popBackStack()
                 }

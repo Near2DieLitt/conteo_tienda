@@ -3,7 +3,6 @@ package com.example.rinconsur.data
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-
 class SesionPreferencias (context: Context){
     private val prefs: SharedPreferences = context.getSharedPreferences("sesion", Context.MODE_PRIVATE)
 
@@ -22,15 +21,16 @@ class SesionPreferencias (context: Context){
         prefs.edit{remove(CLAVE_ID_USUARIO)}
     }
 
-    fun guardarEntradaActiva(codigo: String) {
-        prefs.edit { putString("entrada_activa", codigo) }
+    private fun claveEntrada(correo: String) = "entrada_activa_${correo.trim().lowercase()}"
+
+    fun guardarEntradaActiva(correo: String, codigo: String) {
+        prefs.edit { putString(claveEntrada(correo), codigo) }
     }
 
-    fun obtenerEntradaActiva(): String? {
-        return prefs.getString("entrada_activa", null)
-    }
+    fun obtenerEntradaActiva(correo: String): String? =
+        prefs.getString(claveEntrada(correo), null)
 
-    fun borrarEntradaActiva() {
-        prefs.edit { remove("entrada_activa") }
+    fun borrarEntradaActiva(correo: String) {
+        prefs.edit { remove(claveEntrada(correo)) }
     }
 }

@@ -28,7 +28,7 @@ import com.example.rinconsur.ui.components.TarjetaSesionMenu
 import com.example.rinconsur.ui.components.TarjetaSinSesionActiva
 import com.example.rinconsur.ui.components.TarjetaVisitantesTienda
 import com.example.rinconsur.viewmodel.MenuPrincipalViewmodel
-
+import kotlinx.coroutines.delay
 @Composable
 fun MenuPrincipalScreen(
     correoUsuario: String = "",
@@ -44,6 +44,10 @@ fun MenuPrincipalScreen(
     LaunchedEffect(correoUsuario) {
         viewModel.cargarDatosUsuarios(correoUsuario)
         viewModel.cargarVisitantes()
+        while (true) {
+            delay(2000)
+            viewModel.refrescar()
+        }
     }
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
