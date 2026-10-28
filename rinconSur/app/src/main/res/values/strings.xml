@@ -4,6 +4,8 @@
     <string name="app_name">rinconSur</string>
 
     <!-- PANTALLA 1: FORMULARIO-->
+    <string name="cd_logo">Logo de Rincón Sur</string>
+
     <string name="mini_titulo">Rincón Sur</string>
     <string name="titulo_formulario">Iniciar Sesión</string>
     <string name="subtitulo_formulario">Acceso para personal autorizado</string>

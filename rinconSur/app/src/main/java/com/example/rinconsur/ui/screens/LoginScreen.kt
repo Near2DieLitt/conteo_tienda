@@ -1,6 +1,7 @@
 package com.example.rinconsur.ui.screens
 
 import android.util.Patterns
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +45,8 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -58,6 +61,8 @@ import com.example.rinconsur.model.RolUsuario
 import com.example.rinconsur.ui.components.RinconSurCampoTexto
 import com.example.rinconsur.ui.theme.Dimens
 import com.example.rinconsur.viewmodel.LoginViewModel
+
+
 
 @Composable
 fun LoginScreen(
@@ -125,6 +130,18 @@ fun LoginScreen(
                 .offset(y = 80.dp)
         )
 
+        Image(
+            painter = painterResource(id = R.drawable.logo_rincon_sur),
+            contentDescription = stringResource(R.string.cd_logo),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
+                .padding(start = 24.dp, top = 8.dp)
+                .height(56.dp),
+            contentScale = ContentScale.Fit,
+            alignment = Alignment.CenterStart
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -137,11 +154,6 @@ fun LoginScreen(
                 ),
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "Rincón Sur",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
 
             Text(
                 text = "Iniciar sesión",
