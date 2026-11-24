@@ -18,25 +18,47 @@ object ConvertidorImagen {
     fun desdeUri(context: Context, uri: Uri): Bitmap? = try {
         val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val origen = ImageDecoder.createSource(context.contentResolver, uri)
-            ImageDecoder.decodeBitmap(origen) { decoder, _, _ ->
+            ImageDecoder.decodeBitmap(origen) { decoder, info, _ ->
                 decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                decoder.isMutableRequired = true
+                val ancho = info.size.width
+                val alto = info.size.height
+                val mayor = maxOf(ancho, alto)
+                if (mayor > LADO_MAXIMO * 2) {
+                    val ratio = mayor / LADO_MAXIMO
+                    decoder.setTargetSampleSize(ratio.coerceAtLeast(1))
+                }
             }
         } else {
-            context.contentResolver.openInputStream(uri).use { flujo ->
+            context.contentResolver.openInputStream(uri)?.use { flujo ->
                 BitmapFactory.decodeStream(flujo)
             }
         }
-        bitmap?.let { corregirOrientacionExif(context, uri, it) }
-    } catch (e: Exception) {
+        val corregido = bitmap?.let { corregirOrientacionExif(context, uri, it) }
+        corregido?.let { asegurarArgb8888(achicar(it)) }
+    } catch (e: Throwable) {
+        e.printStackTrace()
         null
     }
 
-    fun corregirRotacionCamara(bitmap: Bitmap): Bitmap {
-        return if (bitmap.width > bitmap.height) {
-            val matrix = Matrix().apply { postRotate(90f) }
-            Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    private fun asegurarArgb8888(bitmap: Bitmap): Bitmap {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bitmap.config == Bitmap.Config.HARDWARE) {
+            return bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: bitmap
+        }
+        return if (bitmap.config != Bitmap.Config.ARGB_8888) {
+            bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: bitmap
         } else {
             bitmap
+        }
+    }
+
+    fun corregirRotacionCamara(bitmap: Bitmap): Bitmap {
+        val seguro = asegurarArgb8888(bitmap)
+        return if (seguro.width > seguro.height) {
+            val matrix = Matrix().apply { postRotate(90f) }
+            Bitmap.createBitmap(seguro, 0, 0, seguro.width, seguro.height, matrix, true)
+        } else {
+            seguro
         }
     }
 
@@ -59,31 +81,39 @@ object ConvertidorImagen {
                     return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             e.printStackTrace()
         }
         return bitmap
     }
 
-    fun aBytes(bitmap: Bitmap): ByteArray{
-        val chico = achicar(bitmap)
+    fun aBytes(bitmap: Bitmap): ByteArray {
+        val chico = achicar(asegurarArgb8888(bitmap))
         val salida = ByteArrayOutputStream()
         chico.compress(Bitmap.CompressFormat.JPEG, CALIDAD_JPEG, salida)
         return salida.toByteArray()
     }
 
-    fun aBitmap(bytes: ByteArray): Bitmap? =
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    fun aBitmap(bytes: ByteArray): Bitmap? = try {
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.let { asegurarArgb8888(it) }
+    } catch (e: Throwable) {
+        null
+    }
 
-    private fun achicar(bitmap: Bitmap): Bitmap{
-        val ladoMayor = maxOf(bitmap.width, bitmap.height)
-        if (ladoMayor <= LADO_MAXIMO) return bitmap
-        val escala = LADO_MAXIMO.toFloat()
-        return Bitmap.createScaledBitmap(
-            bitmap,
-            (bitmap.width * escala).toInt(),
-            (bitmap.height * escala).toInt(),
-            true
+    fun calcularDimensionesEscaladas(ancho: Int, alto: Int, maxLado: Int = LADO_MAXIMO): Pair<Int, Int> {
+        if (ancho <= 0 || alto <= 0) return Pair(maxLado, maxLado)
+        val ladoMayor = maxOf(ancho, alto)
+        if (ladoMayor <= maxLado) return Pair(ancho, alto)
+        val escala = maxLado.toFloat() / ladoMayor.toFloat()
+        return Pair(
+            (ancho * escala).toInt().coerceAtLeast(1),
+            (alto * escala).toInt().coerceAtLeast(1)
         )
+    }
+
+    private fun achicar(bitmap: Bitmap): Bitmap {
+        val (nuevoAncho, nuevoAlto) = calcularDimensionesEscaladas(bitmap.width, bitmap.height, LADO_MAXIMO)
+        if (nuevoAncho == bitmap.width && nuevoAlto == bitmap.height) return bitmap
+        return Bitmap.createScaledBitmap(bitmap, nuevoAncho, nuevoAlto, true)
     }
 }

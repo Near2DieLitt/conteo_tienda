@@ -2,8 +2,8 @@ package com.example.rinconsur.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import at.favre.lib.crypto.bcrypt.BCrypt
-import com.example.rinconsur.data.UsuarioDbHelper
+import androidx.lifecycle.viewModelScope
+import com.example.rinconsur.data.RinconSurRepository
 import com.example.rinconsur.model.Colaborador
 import com.example.rinconsur.model.PerfilAcceso
 import com.example.rinconsur.model.RolUsuario
@@ -11,8 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.security.SecureRandom
-
+import kotlinx.coroutines.launch
 
 object RutUtil {
     fun normalizar(texto: String): String? {
@@ -44,9 +43,8 @@ data class ErroresColaborador(
     val hayErrores get() = nombre != null || correo != null || rut != null
 }
 
-
 object ValidadorColaborador {
-    const val DOMINIO = "@rinconsur.cl"
+    private val REGEX_CORREO_REAL = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
 
     fun validarNombre(nombre: String): String? {
         val n = nombre.trim().replace(Regex("\\s+"), " ")
@@ -63,7 +61,7 @@ object ValidadorColaborador {
         val c = correo.trim().lowercase()
         return when {
             c.isEmpty() -> "Ingresa el correo"
-            !Regex("^[a-z0-9._-]+@rinconsur\\.cl$").matches(c) -> "Debe ser nombre$DOMINIO"
+            !REGEX_CORREO_REAL.matches(c) -> "Ingresa un correo electrónico real válido (ej: usuario@gmail.com)"
             c.length > 100 -> "Correo demasiado largo"
             else -> null
         }
@@ -76,8 +74,6 @@ object ValidadorColaborador {
     }
 }
 
-data class CredencialTemporal(val correo: String, val clave: String)
-
 data class EquipoUiState(
     val colaboradores: List<Colaborador> = emptyList(),
     val esAdmin: Boolean = false,
@@ -85,8 +81,7 @@ data class EquipoUiState(
     val busqueda: String = "",
     val filtroPerfil: String? = null,
     val errores: ErroresColaborador = ErroresColaborador(),
-    val mensaje: String? = null,
-    val credencial: CredencialTemporal? = null
+    val mensaje: String? = null
 ) {
     val visibles: List<Colaborador>
         get() = colaboradores.filter {
@@ -99,7 +94,7 @@ data class EquipoUiState(
 }
 
 class EquipoViewModel(application: Application) : AndroidViewModel(application) {
-    private val db = UsuarioDbHelper(application)
+    private val repository = RinconSurRepository()
     private val _uiState = MutableStateFlow(EquipoUiState())
     val uiState: StateFlow<EquipoUiState> = _uiState.asStateFlow()
 
@@ -111,21 +106,27 @@ class EquipoViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun refrescar() {
-        val yo = db.obtenerColaboradorPorCorreo(correoActual)
-        _uiState.update {
-            it.copy(
-                colaboradores = db.obtenerColaboradores(),
-                esAdmin = db.esAdminActivo(correoActual),
-                miId = yo?.id ?: -1
-            )
+        viewModelScope.launch {
+            try {
+                val lista = repository.listarUsuarios().map { it.aColaborador() }
+                val yo = lista.firstOrNull { it.correo.equals(correoActual.trim(), ignoreCase = true) }
+                _uiState.update {
+                    it.copy(
+                        colaboradores = lista,
+                        esAdmin = yo != null && yo.activo && yo.rol == RolUsuario.ADMIN,
+                        miId = yo?.id ?: -1
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(mensaje = e.message ?: "No se pudo cargar el equipo") }
+            }
         }
     }
 
-
     private fun autorizado(): Boolean {
-        val ok = db.esAdminActivo(correoActual)
+        val ok = _uiState.value.esAdmin
         if (!ok) {
-            _uiState.update { it.copy(esAdmin = false, mensaje = "Solo un administrador puede hacer cambios") }
+            _uiState.update { it.copy(mensaje = "Solo un administrador puede hacer cambios") }
         }
         return ok
     }
@@ -133,9 +134,7 @@ class EquipoViewModel(application: Application) : AndroidViewModel(application) 
     fun actualizarBusqueda(texto: String) = _uiState.update { it.copy(busqueda = texto.take(60)) }
     fun filtrarPerfil(codigo: String?) = _uiState.update { it.copy(filtroPerfil = codigo) }
     fun limpiarMensaje() = _uiState.update { it.copy(mensaje = null) }
-    fun cerrarCredencial() = _uiState.update { it.copy(credencial = null) }
     fun limpiarErrores() = _uiState.update { it.copy(errores = ErroresColaborador()) }
-
 
     fun validarCampo(campo: String, valor: String) {
         _uiState.update {
@@ -161,11 +160,12 @@ class EquipoViewModel(application: Application) : AndroidViewModel(application) 
         )
         val correoLimpio = correo.trim().lowercase()
         val rutNormal = RutUtil.normalizar(rut)
+        val actuales = _uiState.value.colaboradores
 
-        if (errores.correo == null && db.existeCorreoRegistrado(correoLimpio)) {
+        if (errores.correo == null && actuales.any { it.correo.equals(correoLimpio, ignoreCase = true) }) {
             errores = errores.copy(correo = "Este correo ya está registrado")
         }
-        if (errores.rut == null && rutNormal != null && db.existeRut(rutNormal)) {
+        if (errores.rut == null && rutNormal != null && actuales.any { it.rut.equals(rutNormal, ignoreCase = true) }) {
             errores = errores.copy(rut = "Este RUT ya está registrado")
         }
         if (errores.hayErrores || rutNormal == null) {
@@ -173,39 +173,67 @@ class EquipoViewModel(application: Application) : AndroidViewModel(application) 
             return false
         }
 
-        val clave = generarClaveTemporal()
-        val hash = BCrypt.withDefaults().hashToString(12, clave.toCharArray())
         val nombreLimpio = nombre.trim().replace(Regex("\\s+"), " ")
-        val id = db.insertarColaborador(nombreLimpio, correoLimpio, rutNormal, hash, perfil)
-
-        if (id == -1L) {
-            _uiState.update { it.copy(mensaje = "No se pudo registrar a la persona") }
-            return false
+        viewModelScope.launch {
+            try {
+                val msg = repository.crearColaborador(
+                    nombre = nombreLimpio,
+                    correo = correoLimpio,
+                    rut = rutNormal,
+                    perfil = perfil.codigo,
+                    rol = perfil.rol.name
+                )
+                _uiState.update { it.copy(errores = ErroresColaborador(), mensaje = msg) }
+                refrescar()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(mensaje = e.message ?: "No se pudo crear el colaborador") }
+            }
         }
-        _uiState.update {
-            it.copy(errores = ErroresColaborador(), credencial = CredencialTemporal(correoLimpio, clave))
-        }
-        refrescar()
         return true
     }
 
     fun cambiarActivo(colaborador: Colaborador, activar: Boolean) {
         if (!autorizado()) return
-        if (!activar) {
-            if (colaborador.id == _uiState.value.miId) {
-                _uiState.update { it.copy(mensaje = "No puedes deshabilitar tu propia cuenta") }
-                return
-            }
-            if (colaborador.rol == RolUsuario.ADMIN && colaborador.activo && db.contarAdminsActivos() <= 1) {
-                _uiState.update { it.copy(mensaje = "Debe quedar al menos un administrador activo") }
-                return
+        if (!activar && colaborador.id == _uiState.value.miId) {
+            _uiState.update { it.copy(mensaje = "No puedes deshabilitar tu propia cuenta") }
+            return
+        }
+        viewModelScope.launch {
+            try {
+                repository.cambiarActivoColaborador(
+                    idObjetivo = colaborador.id.toLong(),
+                    idSolicitante = _uiState.value.miId.toLong(),
+                    activo = activar
+                )
+                _uiState.update {
+                    it.copy(mensaje = if (activar) "${colaborador.nombre} habilitado(a)" else "${colaborador.nombre} deshabilitado(a)")
+                }
+                refrescar()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(mensaje = e.message ?: "No se pudo cambiar el estado") }
             }
         }
-        db.cambiarActivoColaborador(colaborador.id, activar)
-        _uiState.update {
-            it.copy(mensaje = if (activar) "${colaborador.nombre} habilitado(a)" else "${colaborador.nombre} deshabilitado(a)")
+    }
+
+    fun generarClaveTemporal(colaborador: Colaborador) {
+        if (!autorizado()) return
+        if (colaborador.id == _uiState.value.miId) {
+            _uiState.update { it.copy(mensaje = "Para tu cuenta usa Cambiar contraseña en tu perfil") }
+            return
         }
-        refrescar()
+        viewModelScope.launch {
+            try {
+                val resp = repository.generarClaveTemporal(
+                    idObjetivo = colaborador.id.toLong(),
+                    idSolicitante = _uiState.value.miId.toLong()
+                )
+                _uiState.update {
+                    it.copy(mensaje = resp["mensaje"]?.toString() ?: "Se envió una clave temporal al correo de ${colaborador.nombre}")
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(mensaje = e.message ?: "No se pudo generar la clave temporal") }
+            }
+        }
     }
 
     fun cambiarPerfil(colaborador: Colaborador, perfil: PerfilAcceso) {
@@ -215,30 +243,65 @@ class EquipoViewModel(application: Application) : AndroidViewModel(application) 
             _uiState.update { it.copy(mensaje = "No puedes cambiar tu propio perfil") }
             return
         }
-        if (colaborador.rol == RolUsuario.ADMIN && colaborador.activo &&
-            perfil.rol != RolUsuario.ADMIN && db.contarAdminsActivos() <= 1
-        ) {
-            _uiState.update { it.copy(mensaje = "Debe quedar al menos un administrador activo") }
-            return
+        viewModelScope.launch {
+            try {
+                repository.cambiarPerfilColaborador(
+                    idObjetivo = colaborador.id.toLong(),
+                    idSolicitante = _uiState.value.miId.toLong(),
+                    perfil = perfil.codigo,
+                    rol = perfil.rol.name
+                )
+                _uiState.update { it.copy(mensaje = "Perfil de ${colaborador.nombre}: ${perfil.nombre}") }
+                refrescar()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(mensaje = e.message ?: "No se pudo cambiar el perfil") }
+            }
         }
-        db.cambiarPerfilColaborador(colaborador.id, perfil)
-        _uiState.update { it.copy(mensaje = "Perfil de ${colaborador.nombre}: ${perfil.nombre}") }
-        refrescar()
     }
 
-    private fun generarClaveTemporal(): String {
-        val r = SecureRandom()
-        val mayus = "ABCDEFGHJKMNPQRSTUVWXYZ"
-        val minus = "abcdefghjkmnpqrstuvwxyz"
-        val nums = "23456789"
-        val todos = mayus + minus + nums
-        val chars = mutableListOf(
-            mayus[r.nextInt(mayus.length)],
-            minus[r.nextInt(minus.length)],
-            nums[r.nextInt(nums.length)]
+    fun actualizarDatosColaborador(
+        colaborador: Colaborador,
+        nuevoNombre: String,
+        nuevoCorreo: String,
+        onCorreoPropioCambiado: (String) -> Unit = {}
+    ): Boolean {
+        if (!autorizado()) return false
+
+        var errores = ErroresColaborador(
+            nombre = ValidadorColaborador.validarNombre(nuevoNombre),
+            correo = ValidadorColaborador.validarCorreo(nuevoCorreo)
         )
-        repeat(7) { chars.add(todos[r.nextInt(todos.length)]) }
-        chars.shuffle(r)
-        return chars.joinToString("")
+        val nombreLimpio = nuevoNombre.trim().replace(Regex("\\s+"), " ")
+        val correoLimpio = nuevoCorreo.trim().lowercase()
+
+        if (errores.correo == null && _uiState.value.colaboradores.any {
+                it.id != colaborador.id && it.correo.equals(correoLimpio, ignoreCase = true)
+            }) {
+            errores = errores.copy(correo = "Este correo ya está registrado por otro usuario")
+        }
+        if (errores.hayErrores) {
+            _uiState.update { it.copy(errores = errores) }
+            return false
+        }
+
+        viewModelScope.launch {
+            try {
+                repository.actualizarDatosColaborador(colaborador.id.toLong(), nombreLimpio, correoLimpio)
+                if (colaborador.id == _uiState.value.miId) {
+                    correoActual = correoLimpio
+                    onCorreoPropioCambiado(correoLimpio)
+                }
+                _uiState.update {
+                    it.copy(
+                        errores = ErroresColaborador(),
+                        mensaje = "Datos de $nombreLimpio actualizados ($correoLimpio)"
+                    )
+                }
+                refrescar()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(mensaje = e.message ?: "No se pudieron actualizar los datos") }
+            }
+        }
+        return true
     }
 }

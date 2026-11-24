@@ -11,5 +11,7 @@ sealed class ResultadoBoleta {
     data object FormatoInvalido : ResultadoBoleta()
     data object YaProcesada : ResultadoBoleta()
     data object SinVisitanteActivo : ResultadoBoleta()
+    data object SinSeleccion : ResultadoBoleta()
+    data class ErrorServidor(val mensaje: String) : ResultadoBoleta()
     data class Exito(val idVisitante: Long, val folio: String) : ResultadoBoleta()
 }

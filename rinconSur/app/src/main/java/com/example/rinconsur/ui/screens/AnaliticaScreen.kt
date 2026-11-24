@@ -80,6 +80,7 @@ fun AnaliticaScreen(
     val context = LocalContext.current
 
     var mostrarRango by remember { mutableStateOf(false) }
+    var menuAbierto by remember { mutableStateOf(false) }
 
     if (mostrarRango) {
         DialogoRangoFechas(
@@ -97,7 +98,7 @@ fun AnaliticaScreen(
             onCambio = { campo, valor -> viewModel.cambiarCampo(campo, valor) },
             onCancelar = { viewModel.cerrarFormulario() },
             onGuardar = {
-                if (viewModel.guardarRegistro()) {
+                viewModel.guardarRegistro {
                     Toast.makeText(context, "Conteo registrado", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -132,7 +133,7 @@ fun AnaliticaScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-
+            // Encabezado
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -217,6 +218,37 @@ fun AnaliticaScreen(
                                 color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario
                             )
                         }
+                        Box {
+                            IconButton(onClick = { menuAbierto = true }, enabled = puedeEditar) {
+                                Icon(
+                                    Icons.Outlined.MoreHoriz,
+                                    stringResource(R.string.cd_opciones),
+                                    tint = (if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario).copy(alpha = if (puedeEditar) 1f else 0.4f)
+                                )
+                            }
+                            DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Registrar conteo") },
+                                    onClick = {
+                                        menuAbierto = false
+                                        viewModel.abrirFormulario()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Cargar datos de prueba") },
+                                    onClick = {
+                                        menuAbierto = false
+                                        viewModel.cargarDatosDePrueba { cargados ->
+                                            Toast.makeText(
+                                                context,
+                                                if (cargados) "Datos ficticios cargados" else "Ya existen registros",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -264,34 +296,37 @@ fun AnaliticaScreen(
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF1D4950) else FondoBeige),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .padding(vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.CalendarToday,
-                        contentDescription = null,
-                        tint = if (modoOscuro) AdvertenciaOscura else Ambar600,
-                        modifier = Modifier.size(20.dp)
+                    Estadistica(
+                        icono = Icons.Outlined.TrendingUp,
+                        valor = state.crecimiento?.let { String.format(localeCl, "%+.0f%%", it) } ?: "—",
+                        etiqueta = "Crecimiento",
+                        modoOscuro = modoOscuro,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Sesiones",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario
+                    DivisorVertical(modoOscuro = modoOscuro)
+                    Estadistica(
+                        icono = Icons.Outlined.Schedule,
+                        valor = state.duracionPromedioMin?.let { "$it min" } ?: "—",
+                        etiqueta = "Promedio",
+                        modoOscuro = modoOscuro,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        text = state.cantidadSesiones.toString(),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (modoOscuro) Color.White else Petroleo800
+                    DivisorVertical(modoOscuro = modoOscuro)
+                    Estadistica(
+                        icono = Icons.Outlined.CalendarToday,
+                        valor = state.cantidadSesiones.toString(),
+                        etiqueta = "Sesiones",
+                        modoOscuro = modoOscuro,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
@@ -595,8 +630,25 @@ private fun LeyendaPunto(color: Color, texto: String, modoOscuro: Boolean = fals
     }
 }
 
+@Composable
+private fun Estadistica(icono: ImageVector, valor: String, etiqueta: String, modoOscuro: Boolean = false, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icono, contentDescription = null, tint = if (modoOscuro) AdvertenciaOscura else Ambar600, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(valor, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800)
+        Text(etiqueta, fontSize = 10.sp, color = if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario)
+    }
+}
 
-
+@Composable
+private fun DivisorVertical(modoOscuro: Boolean = false) {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(44.dp)
+            .background((if (modoOscuro) Color(0xFFB9CACB) else TextoSecundario).copy(alpha = 0.25f))
+    )
+}
 
 @Composable
 private fun GraficoBarras(

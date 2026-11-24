@@ -1,13 +1,12 @@
 package com.example.rinconsur.ui.components
 
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,10 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import com.example.rinconsur.model.Accesos
 import com.example.rinconsur.model.RangoEtario
 import com.example.rinconsur.model.ResumenVisitantes
@@ -34,6 +29,7 @@ fun TarjetaVisitantesTienda(
     onEjecutarCierre: () -> Unit,
     onEscanearBoleta: () -> Unit,
     onFinalizarSesion: () -> Unit,
+    puedeHacerConteos: Boolean = true,
     modoOscuro: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -122,7 +118,7 @@ fun TarjetaVisitantesTienda(
                     ) {
                         Column {
                             Text(
-                                text = "Estado: En_Tienda",
+                                text = "Personas en tienda",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray
                             )
@@ -141,6 +137,7 @@ fun TarjetaVisitantesTienda(
 
                         Button(
                             onClick = onEscanearBoleta,
+                            enabled = puedeHacerConteos,
                             colors = ButtonDefaults.buttonColors(containerColor = verdeResaltado),
                             shape = RoundedCornerShape(12.dp)
                         ) {
@@ -213,6 +210,7 @@ fun TarjetaVisitantesTienda(
                     ) {
                         OutlinedButton(
                             onClick = { onRegistrarEntrada(rangoSeleccionado) },
+                            enabled = puedeHacerConteos,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = verdeResaltado)
@@ -224,6 +222,7 @@ fun TarjetaVisitantesTienda(
 
                         OutlinedButton(
                             onClick = onRegistrarSalida,
+                            enabled = puedeHacerConteos,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = verdeResaltado)
@@ -238,6 +237,7 @@ fun TarjetaVisitantesTienda(
 
                     OutlinedButton(
                         onClick = onEjecutarCierre,
+                        enabled = puedeHacerConteos,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = if (modoOscuro) Color(0xFFF0A66D) else Color(0xFFB85D19))

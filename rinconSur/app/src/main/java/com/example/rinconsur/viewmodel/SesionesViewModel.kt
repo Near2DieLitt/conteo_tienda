@@ -2,14 +2,18 @@ package com.example.rinconsur.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.rinconsur.data.Fechas
-import com.example.rinconsur.data.UsuarioDbHelper
+import com.example.rinconsur.data.RinconSurRepository
+import com.example.rinconsur.data.remote.UsuarioRemotoDto
 import com.example.rinconsur.model.SesionAcceso
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.util.Calendar
+
 data class SesionesUiState(
     val tab: Int = 0,
     val fechaSeleccionada: String = "",
@@ -19,17 +23,19 @@ data class SesionesUiState(
     val usuariosDisponibles: List<Pair<String, String>> = emptyList()
 )
 
-class SesionesViewModel (application: Application): AndroidViewModel(application){
-    private val db = UsuarioDbHelper(application)
+class SesionesViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = RinconSurRepository()
 
-    private var puedeEditar = false
+    private var puedeCrearSesiones = false
+    private var puedeHacerConteos = false
+    private var usuariosCache: List<UsuarioRemotoDto> = emptyList()
 
     private val _uiState = MutableStateFlow(estadoInicial())
     val uiState: StateFlow<SesionesUiState> = _uiState.asStateFlow()
 
     init {
-        recargar()
         cargarUsuarios()
+        recargar()
     }
 
     private fun estadoInicial(): SesionesUiState {
@@ -43,27 +49,70 @@ class SesionesViewModel (application: Application): AndroidViewModel(application
     }
 
     fun cargarUsuarios() {
-        val lista = db.obtenerUsuariosListado()
-        _uiState.update { it.copy(usuariosDisponibles = lista) }
+        viewModelScope.launch {
+            try {
+                val todos = repository.listarUsuarios()
+                usuariosCache = todos
+                val lista = todos.filter { it.activo }
+                    .sortedBy { it.nombre }
+                    .map { Pair(it.correo, it.nombre) }
+                _uiState.update { it.copy(usuariosDisponibles = lista) }
+            } catch (_: Exception) { }
+        }
     }
 
-    fun definirPermisos(puede: Boolean) {
-        puedeEditar = puede
+    fun definirPermisos(puedeSesiones: Boolean, puedeConteos: Boolean = false) {
+        puedeCrearSesiones = puedeSesiones
+        puedeHacerConteos = puedeConteos
+        cargarUsuarios()
         recargar()
     }
 
     private fun recargar() {
         val s = _uiState.value
-        val lista = when (s.tab) {
-            0 -> db.obtenerSesiones(s.fechaSeleccionada, s.fechaSeleccionada, puedeEditar)
-            1 -> db.obtenerSesiones(
-                Fechas.inicioSemana(s.fechaSeleccionada),
-                Fechas.finSemana(s.fechaSeleccionada),
-                puedeEditar
-            )
-            else -> db.obtenerSesiones("0000-01-01", Fechas.ayer(), puedeEditar)
+        val (desde, hasta) = when (s.tab) {
+            0 -> Pair(s.fechaSeleccionada, s.fechaSeleccionada)
+            1 -> Pair(Fechas.inicioSemana(s.fechaSeleccionada), Fechas.finSemana(s.fechaSeleccionada))
+            else -> Pair("2000-01-01", Fechas.ayer())
         }
-        _uiState.update { it.copy(sesiones = lista) }
+
+        viewModelScope.launch {
+            try {
+                if (usuariosCache.isEmpty()) {
+                    usuariosCache = try { repository.listarUsuarios() } catch (_: Exception) { emptyList() }
+                }
+                val mapaNombres = usuariosCache.associate { it.id to it.nombre }
+                val sesionesRemotas = repository.listarSesiones(
+                    desde = desde,
+                    hasta = hasta,
+                    incluirInactivas = puedeCrearSesiones
+                )
+                val flujos = try {
+                    repository.listarFlujo(desde, hasta, incluirInactivos = false)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+                val flujoPorClave = flujos.groupBy { "${it.fecha}_${it.acceso.uppercase()}" }
+
+                val lista = sesionesRemotas.map { dto ->
+                    val flujosSesion = flujoPorClave["${dto.fecha}_${dto.codigo.uppercase()}"].orEmpty()
+                    SesionAcceso(
+                        id = dto.id ?: 0L,
+                        codigo = dto.codigo,
+                        nombre = dto.nombre,
+                        fecha = dto.fecha,
+                        activo = dto.activo,
+                        usuarioAsignado = dto.idUsuarioAsignado?.let { mapaNombres[it] },
+                        transitoJoven = flujosSesion.sumOf { it.transitoJoven },
+                        transitoAdulto = flujosSesion.sumOf { it.transitoAdulto },
+                        transitoMayor = flujosSesion.sumOf { it.transitoMayor },
+                        totalIngresos = flujosSesion.sumOf { it.ingresos },
+                        conteos = emptyList()
+                    )
+                }
+                _uiState.update { it.copy(sesiones = lista) }
+            } catch (_: Exception) { }
+        }
     }
 
     fun seleccionarTab(tab: Int) {
@@ -88,38 +137,66 @@ class SesionesViewModel (application: Application): AndroidViewModel(application
         }
     }
 
-
-    fun crearSesion(codigo: String, nombre: String, usuarioAsignado: String? = null): Boolean {
-        if (!puedeEditar) return false
+    fun crearSesion(
+        codigo: String,
+        nombre: String,
+        usuarioAsignado: String? = null,
+        onResultado: (Boolean, String) -> Unit = { _, _ -> }
+    ) {
+        if (!puedeCrearSesiones) {
+            onResultado(false, "Solo un supervisor puede crear sesiones")
+            return
+        }
         val codigoLimpio = codigo.trim().uppercase()
         val entradasValidas = setOf("A1", "A2", "A3", "A4")
-        if (!entradasValidas.contains(codigoLimpio)) return false
+        if (!entradasValidas.contains(codigoLimpio)) {
+            onResultado(false, "Código de acceso inválido")
+            return
+        }
 
         val fecha = _uiState.value.fechaSeleccionada
-        if (fecha < Fechas.hoy()) return false
-        val idUsuario = usuarioAsignado?.let { db.obtenerUsuarioPorCorreo(it)?.id?.toLong() }
-        db.insertarSesion(codigoLimpio, nombre.trim(), fecha, idUsuario)
-        recargar()
-        return true
+        if (fecha < Fechas.hoy()) {
+            onResultado(false, "No se puede programar en una fecha pasada")
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val idUsuario = usuarioAsignado?.let { correo ->
+                    usuariosCache.firstOrNull { it.correo.equals(correo, ignoreCase = true) }?.id
+                        ?: try { repository.buscarUsuarioPorCorreo(correo).id } catch (_: Exception) { null }
+                }
+                repository.crearSesion(codigoLimpio, nombre.trim(), fecha, idUsuario)
+                recargar()
+                onResultado(true, "Sesión creada y asignada")
+            } catch (e: Exception) {
+                onResultado(false, e.message ?: "Error al crear sesión")
+            }
+        }
     }
 
     fun cambiarActivoSesion(idSesion: Long, activo: Boolean) {
-        if (!puedeEditar) return
-        db.cambiarActivoSesion(idSesion, activo)
-        recargar()
+        if (!puedeCrearSesiones) return
+        viewModelScope.launch {
+            try {
+                repository.cambiarActivoSesion(idSesion, activo)
+                recargar()
+            } catch (_: Exception) { }
+        }
     }
 
-
-
     fun cambiarActivoConteo(idConteo: Long, activo: Boolean) {
-        if (!puedeEditar) return
-        db.cambiarActivoConteo(idConteo, activo)
+        if (!puedeHacerConteos) return
         recargar()
     }
 
     fun cambiarEstadoConteo(idConteo: Long, completado: Boolean) {
-        if (!puedeEditar) return
-        db.cambiarEstadoConteo(idConteo, completado)
-        recargar()
+        if (!puedeHacerConteos) return
+        viewModelScope.launch {
+            try {
+                repository.cambiarCompletadaSesion(idConteo, completado)
+                recargar()
+            } catch (_: Exception) { }
+        }
     }
 }
