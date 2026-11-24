@@ -50,13 +50,14 @@ import java.util.Calendar
 @Composable
 fun SesionesScreen(
     puedeEditar: Boolean,
+    puedeHacerConteos: Boolean = false,
     modoOscuro: Boolean,
     onCambiarTema: () -> Unit,
     onNavegar: (DestinoBarra) -> Unit,
     viewModel: SesionesViewModel = viewModel()
 ) {
-    LaunchedEffect(puedeEditar) {
-        viewModel.definirPermisos(puedeEditar)
+    LaunchedEffect(puedeEditar, puedeHacerConteos) {
+        viewModel.definirPermisos(puedeEditar, puedeHacerConteos)
     }
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -72,13 +73,10 @@ fun SesionesScreen(
             usuarios = state.usuariosDisponibles,
             onCancelar = { mostrarNuevaSesion = false },
             onGuardar = { codigo, nombre, usuarioAsignado ->
-                val creada = viewModel.crearSesion(codigo, nombre, usuarioAsignado)
-                mostrarNuevaSesion = false
-                Toast.makeText(
-                    context,
-                    if (creada) "Sesión creada y asignada" else "No se puede programar en una fecha pasada",
-                    Toast.LENGTH_SHORT
-                ).show()
+                viewModel.crearSesion(codigo, nombre, usuarioAsignado) { creada, msg ->
+                    if (creada) mostrarNuevaSesion = false
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
             }
         )
     }
@@ -302,7 +300,7 @@ fun SesionesScreen(
             val puedeProgramar = puedeEditar && !fechaPasada
             val colorBorde = if (modoOscuro) Color(0xFF31575D) else TextoSecundario
             val textoBoton = when {
-                !puedeEditar -> "Solo el administrador puede programar sesiones"
+                !puedeEditar -> "Solo el supervisor puede programar sesiones"
                 fechaPasada -> "No se puede programar en fechas pasadas"
                 else -> "Programar nueva sesión"
             }
@@ -359,6 +357,7 @@ fun SesionesScreen(
                     TarjetaSesion(
                         sesion = sesion,
                         puedeEditar = puedeEditar,
+                        puedeHacerConteos = puedeHacerConteos,
                         modoOscuro = modoOscuro,
                         onToggleConteo = { id, marcado -> viewModel.cambiarEstadoConteo(id, marcado) },
                         onCambiarActivoConteo = { id, activo ->
@@ -386,6 +385,7 @@ fun SesionesScreen(
 private fun TarjetaSesion(
     sesion: SesionAcceso,
     puedeEditar: Boolean,
+    puedeHacerConteos: Boolean = false,
     onToggleConteo: (Long, Boolean) -> Unit,
     onCambiarActivoConteo: (Long, Boolean) -> Unit,
     onDeshabilitarSesion: () -> Unit,
@@ -527,7 +527,7 @@ private fun TarjetaSesion(
             }
 
             sesion.conteos.forEach { conteo ->
-                val puedeMarcar = puedeEditar && sesion.activo && conteo.activo
+                val puedeMarcar = puedeHacerConteos && sesion.activo && conteo.activo
 
                 Row(
                     modifier = Modifier
@@ -555,7 +555,7 @@ private fun TarjetaSesion(
                             }
                         }
                     }
-                    if (puedeEditar && sesion.activo) {
+                    if (puedeHacerConteos && sesion.activo) {
                         IconButton(
                             onClick = { onCambiarActivoConteo(conteo.id, !conteo.activo) },
                             modifier = Modifier.size(28.dp)

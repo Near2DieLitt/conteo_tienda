@@ -1,21 +1,17 @@
 package com.example.rinconsur.ui.screens
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -25,16 +21,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.rinconsur.R
@@ -53,16 +46,18 @@ fun EquipoScreen(
     modoOscuro: Boolean,
     onCambiarTema: () -> Unit,
     onNavegar: (DestinoBarra) -> Unit,
+    onCorreoPropioActualizado: (String) -> Unit = {},
     viewModel: EquipoViewModel = viewModel()
 ) {
     LaunchedEffect(correoUsuario) { viewModel.cargar(correoUsuario) }
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
 
     var mostrarFormulario by remember { mutableStateOf(false) }
     var paraDeshabilitar by remember { mutableStateOf<Colaborador?>(null) }
+    var paraEditar by remember { mutableStateOf<Colaborador?>(null) }
+    var paraResetear by remember { mutableStateOf<Colaborador?>(null) }
 
     LaunchedEffect(state.mensaje) {
         state.mensaje?.let {
@@ -81,34 +76,6 @@ fun EquipoScreen(
             },
             onGuardar = { nombre, correo, rut, perfil ->
                 if (viewModel.crearColaborador(nombre, correo, rut, perfil)) mostrarFormulario = false
-            }
-        )
-    }
-
-    state.credencial?.let { cred ->
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("Acceso creado", fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800) },
-            text = {
-                Column {
-                    Text("Entrega esta clave temporal a la persona. Solo se muestra una vez.", fontSize = 13.sp, color = if (modoOscuro) Color(0xFFB9CACB) else Color.Unspecified)
-                    Spacer(Modifier.height(12.dp))
-                    Text("Correo: ${cred.correo}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Color.Unspecified)
-                    Text("Clave: ${cred.clave}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800)
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.cerrarCredencial() },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800)
-                ) { Text("Listo", color = Color.White) }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    cm.setPrimaryClip(ClipData.newPlainText("clave", cred.clave))
-                    Toast.makeText(context, "Clave copiada", Toast.LENGTH_SHORT).show()
-                }) { Text("Copiar clave", color = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800) }
             }
         )
     }
@@ -138,6 +105,45 @@ fun EquipoScreen(
         )
     }
 
+    paraResetear?.let { c ->
+        AlertDialog(
+            onDismissRequest = { paraResetear = null },
+            title = { Text("Generar clave temporal", fontWeight = FontWeight.Bold, color = if (modoOscuro) Color.White else Petroleo800) },
+            text = {
+                Text(
+                    "Se enviará una clave temporal nueva al correo de ${c.nombre}. La clave actual dejará de funcionar y deberá cambiarla al iniciar sesión.",
+                    color = if (modoOscuro) Color(0xFFB9CACB) else Color.Unspecified
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.generarClaveTemporal(c)
+                    paraResetear = null
+                }) { Text("Generar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { paraResetear = null }) { Text("Cancelar", color = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800) }
+            }
+        )
+    }
+
+    paraEditar?.let { c ->
+        DialogoEditarPersona(
+            colaborador = c,
+            errores = state.errores,
+            onValidar = viewModel::validarCampo,
+            onCancelar = {
+                viewModel.limpiarErrores()
+                paraEditar = null
+            },
+            onGuardar = { nuevoNombre, nuevoCorreo ->
+                if (viewModel.actualizarDatosColaborador(c, nuevoNombre, nuevoCorreo, onCorreoPropioActualizado)) {
+                    paraEditar = null
+                }
+            }
+        )
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
@@ -148,8 +154,7 @@ fun EquipoScreen(
                     containerColor = if (modoOscuro) Color(0xFF2AAEA4) else Petroleo800,
                     contentColor = Color.White,
                     shape = CircleShape
-                ) { Icon(Icons.Filled.Add,
-                    stringResource(R.string.cd_agregar_persona) )}
+                ) { Icon(Icons.Filled.Add, stringResource(R.string.cd_agregar_persona)) }
             }
         },
         bottomBar = {
@@ -287,8 +292,13 @@ fun EquipoScreen(
                     esYo = c.id == state.miId,
                     puedeEditar = state.esAdmin,
                     modoOscuro = modoOscuro,
+                    onEditarDatos = {
+                        viewModel.limpiarErrores()
+                        paraEditar = c
+                    },
                     onCambiarPerfil = { viewModel.cambiarPerfil(c, it) },
-                    onDeshabilitar = { paraDeshabilitar = c },
+                    onGenerarClave = { paraResetear = c },
+                    onDeshabilitar = { if (c.id != state.miId) paraDeshabilitar = c },
                     onHabilitar = { viewModel.cambiarActivo(c, true) }
                 )
                 Spacer(Modifier.height(10.dp))
@@ -305,7 +315,9 @@ private fun TarjetaColaborador(
     esYo: Boolean,
     puedeEditar: Boolean,
     modoOscuro: Boolean = false,
+    onEditarDatos: () -> Unit,
     onCambiarPerfil: (PerfilAcceso) -> Unit,
+    onGenerarClave: () -> Unit,
     onDeshabilitar: () -> Unit,
     onHabilitar: () -> Unit
 ) {
@@ -362,32 +374,50 @@ private fun TarjetaColaborador(
                     )
                 }
                 DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Editar nombre / correo") },
+                        onClick = {
+                            menuAbierto = false
+                            onEditarDatos()
+                        }
+                    )
+                    if (!esYo && colaborador.activo) {
+                        DropdownMenuItem(
+                            text = { Text("Generar clave temporal") },
+                            onClick = {
+                                menuAbierto = false
+                                onGenerarClave()
+                            }
+                        )
+                    }
                     Perfiles.todos.forEach { p ->
                         DropdownMenuItem(
                             text = { Text("Perfil: ${p.nombre}") },
-                            enabled = colaborador.activo && p.codigo != colaborador.perfil.codigo,
+                            enabled = colaborador.activo && p.codigo != colaborador.perfil.codigo && !esYo,
                             onClick = {
                                 menuAbierto = false
                                 onCambiarPerfil(p)
                             }
                         )
                     }
-                    if (colaborador.activo) {
-                        DropdownMenuItem(
-                            text = { Text("Deshabilitar", color = Error) },
-                            onClick = {
-                                menuAbierto = false
-                                onDeshabilitar()
-                            }
-                        )
-                    } else {
-                        DropdownMenuItem(
-                            text = { Text("Habilitar") },
-                            onClick = {
-                                menuAbierto = false
-                                onHabilitar()
-                            }
-                        )
+                    if (!esYo) {
+                        if (colaborador.activo) {
+                            DropdownMenuItem(
+                                text = { Text("Deshabilitar", color = Error) },
+                                onClick = {
+                                    menuAbierto = false
+                                    onDeshabilitar()
+                                }
+                            )
+                        } else {
+                            DropdownMenuItem(
+                                text = { Text("Habilitar") },
+                                onClick = {
+                                    menuAbierto = false
+                                    onHabilitar()
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -420,7 +450,7 @@ private fun DialogoNuevaPersona(
             placeholder = if (placeholder != null) ({ Text(placeholder) }) else null,
             leadingIcon = { Icon(icono, contentDescription = null) },
             trailingIcon = {
-                if (error != null) Icon(Icons.Outlined.ErrorOutline,stringResource(R.string.cd_error), tint = Error)
+                if (error != null) Icon(Icons.Outlined.ErrorOutline, stringResource(R.string.cd_error), tint = Error)
             },
             isError = error != null,
             supportingText = { error?.let { Text(it, color = Error) } },
@@ -442,7 +472,7 @@ private fun DialogoNuevaPersona(
                 campo(rut, "RUT", errores.rut, Icons.Outlined.Badge, placeholder = "12345678-9") {
                     rut = it.take(12); onValidar("rut", rut)
                 }
-                campo(correo, "Correo", errores.correo, Icons.Outlined.Email, KeyboardType.Email, "nombre@rinconsur.cl") {
+                campo(correo, "Correo electrónico real", errores.correo, Icons.Outlined.Email, KeyboardType.Email, "usuario@gmail.com") {
                     correo = it.take(100); onValidar("correo", correo)
                 }
                 Spacer(Modifier.height(8.dp))
@@ -463,7 +493,7 @@ private fun DialogoNuevaPersona(
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Se genera una clave temporal que verás una sola vez.",
+                    "Se enviará una clave temporal privada directamente al correo electrónico del colaborador.",
                     fontSize = 11.sp
                 )
             }
@@ -472,6 +502,58 @@ private fun DialogoNuevaPersona(
             Button(
                 onClick = { onGuardar(nombre, correo, rut, perfil) }
             ) { Text("Crear acceso") }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) { Text("Cancelar") }
+        }
+    )
+}
+
+@Composable
+private fun DialogoEditarPersona(
+    colaborador: Colaborador,
+    errores: com.example.rinconsur.viewmodel.ErroresColaborador,
+    onValidar: (String, String) -> Unit,
+    onCancelar: () -> Unit,
+    onGuardar: (String, String) -> Unit
+) {
+    var nombre by remember(colaborador.id) { mutableStateOf(colaborador.nombre) }
+    var correo by remember(colaborador.id) { mutableStateOf(colaborador.correo) }
+
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text("Editar colaborador", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(
+                    value = nombre,
+                    onValueChange = { nombre = it.take(60); onValidar("nombre", nombre) },
+                    label = { Text("Nombre completo") },
+                    leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) },
+                    isError = errores.nombre != null,
+                    supportingText = { errores.nombre?.let { Text(it, color = Error) } },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = correo,
+                    onValueChange = { correo = it.take(100); onValidar("correo", correo) },
+                    label = { Text("Correo electrónico real") },
+                    placeholder = { Text("usuario@gmail.com") },
+                    leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null) },
+                    isError = errores.correo != null,
+                    supportingText = { errores.correo?.let { Text(it, color = Error) } },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onGuardar(nombre, correo) }) { Text("Guardar cambios") }
         },
         dismissButton = {
             TextButton(onClick = onCancelar) { Text("Cancelar") }

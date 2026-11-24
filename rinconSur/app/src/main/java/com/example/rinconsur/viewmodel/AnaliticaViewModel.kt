@@ -1,10 +1,11 @@
 package com.example.rinconsur.viewmodel
 
-
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.rinconsur.data.Fechas
-import com.example.rinconsur.data.UsuarioDbHelper
+import com.example.rinconsur.data.RinconSurRepository
+import com.example.rinconsur.data.remote.RegistroFlujoRemotoDto
 import com.example.rinconsur.model.Accesos
 import com.example.rinconsur.model.RegistroFlujo
 import com.example.rinconsur.model.ResumenFlujo
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.util.Calendar
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -78,8 +80,7 @@ object ValidadorRegistroFlujo {
 
 class AnaliticaViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val db = UsuarioDbHelper(application)
-
+    private val repository = RinconSurRepository()
     private var puedeEditar = false
 
     private val _uiState = MutableStateFlow(estadoInicial())
@@ -123,50 +124,65 @@ class AnaliticaViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private fun aMinutos(hora: String): Int? {
-        val p = hora.split(":")
-        if (p.size != 2) return null
-        val h = p[0].trim().toIntOrNull() ?: return null
-        val m = p[1].trim().toIntOrNull() ?: return null
-        return h * 60 + m
-    }
-
-    private fun duracionMinutos(horario: String): Int? {
-        val partes = horario.split("–", "-").map { it.trim() }
-        if (partes.size != 2) return null
-        val inicio = aMinutos(partes[0]) ?: return null
-        val fin = aMinutos(partes[1]) ?: return null
-        return if (fin > inicio) fin - inicio else null
-    }
+    private fun resumir(lista: List<RegistroFlujo>): ResumenFlujo = ResumenFlujo(
+        ingresos = lista.sumOf { it.ingresos },
+        compradores = lista.sumOf { it.compradores },
+        transitoJoven = lista.sumOf { it.transitoJoven },
+        transitoAdulto = lista.sumOf { it.transitoAdulto },
+        transitoMayor = lista.sumOf { it.transitoMayor }
+    )
 
     private fun recargar() {
         val s = _uiState.value
         val (desde, hasta) = rango(s)
-
         val dias = diasEntre(desde, hasta)
         val previoHasta = sumarDias(desde, -1)
         val previoDesde = sumarDias(previoHasta, -(dias - 1))
 
-        val actual = db.obtenerResumenFlujo(desde, hasta, s.acceso)
-        val previo = db.obtenerResumenFlujo(previoDesde, previoHasta, s.acceso)
-        val crecimiento = if (previo.ingresos == 0) null
-        else (actual.ingresos - previo.ingresos) * 100f / previo.ingresos
+        viewModelScope.launch {
+            try {
+                val todosRango = repository.listarFlujo(desde, hasta, incluirInactivos = puedeEditar).map { it.aRegistroFlujo() }
+                val activosRango = todosRango.filter { it.activo }
+                val activosFiltrados = if (s.acceso == null) activosRango else activosRango.filter { it.acceso == s.acceso }
+                val registrosVisibles = (if (s.acceso == null) todosRango else todosRango.filter { it.acceso == s.acceso }).take(8)
 
-        val duraciones = db.obtenerHorariosConteos(desde, hasta, s.acceso)
-            .mapNotNull { duracionMinutos(it) }
-        val promedio = if (duraciones.isEmpty()) null else duraciones.average().roundToInt()
+                val previoLista = try {
+                    repository.listarFlujo(previoDesde, previoHasta, incluirInactivos = false)
+                        .map { it.aRegistroFlujo() }
+                        .filter { s.acceso == null || it.acceso == s.acceso }
+                } catch (_: Exception) {
+                    emptyList()
+                }
 
-        _uiState.update {
-            it.copy(
-                rangoDesde = desde,
-                rangoHasta = hasta,
-                resumen = actual,
-                crecimiento = crecimiento,
-                duracionPromedioMin = promedio,
-                cantidadSesiones = db.contarSesiones(desde, hasta, s.acceso),
-                porAcceso = db.obtenerFlujoPorAcceso(desde, hasta),
-                registros = db.obtenerRegistrosFlujo(desde, hasta, s.acceso, puedeEditar, 8)
-            )
+                val actual = resumir(activosFiltrados)
+                val previo = resumir(previoLista)
+                val crecimiento = if (previo.ingresos == 0) null
+                else (actual.ingresos - previo.ingresos) * 100f / previo.ingresos
+
+                val porAcceso = Accesos.lista.associateWith { cod ->
+                    resumir(activosRango.filter { it.acceso == cod })
+                }
+
+                val sesionesRango = try {
+                    repository.listarSesiones(desde = desde, hasta = hasta, incluirInactivas = false)
+                        .count { s.acceso == null || it.codigo.equals(s.acceso, ignoreCase = true) }
+                } catch (_: Exception) {
+                    0
+                }
+
+                _uiState.update {
+                    it.copy(
+                        rangoDesde = desde,
+                        rangoHasta = hasta,
+                        resumen = actual,
+                        crecimiento = crecimiento,
+                        duracionPromedioMin = null,
+                        cantidadSesiones = sesionesRango,
+                        porAcceso = porAcceso,
+                        registros = registrosVisibles
+                    )
+                }
+            } catch (_: Exception) { }
         }
     }
 
@@ -222,52 +238,58 @@ class AnaliticaViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun guardarRegistro(): Boolean {
-        if (!puedeEditar) return false
+    fun guardarRegistro(onExito: () -> Unit = {}) {
+        if (!puedeEditar) return
         val f = _uiState.value.form
         val errores = ValidadorRegistroFlujo.validar(f, Fechas.hoy())
 
         if (errores.isNotEmpty()) {
             _uiState.update { it.copy(form = f.copy(errores = errores)) }
-            return false
+            return
         }
 
-        db.insertarRegistroFlujo(
-            RegistroFlujo(
-                id = 0,
-                acceso = f.acceso,
-                fecha = f.fecha,
-                ingresos = f.ingresos.toInt(),
-                compradores = f.compradores.toIntOrNull() ?: 0,
-                transitoJoven = f.transitoJoven.toIntOrNull() ?: 0,
-                transitoAdulto = f.transitoAdulto.toIntOrNull() ?: 0,
-                transitoMayor = f.transitoMayor.toIntOrNull() ?: 0,
-                activo = true
-            )
-        )
-        _uiState.update { it.copy(form = FormFlujoState()) }
-        recargar()
-        return true
+        val ingresos = f.ingresos.toInt()
+        val compradores = f.compradores.toIntOrNull() ?: 0
+        val joven = f.transitoJoven.toIntOrNull() ?: 0
+        val adulto = f.transitoAdulto.toIntOrNull() ?: 0
+        val mayor = f.transitoMayor.toIntOrNull() ?: 0
+
+        viewModelScope.launch {
+            try {
+                repository.registrarFlujo(f.acceso, f.fecha, ingresos, compradores, joven, adulto, mayor)
+                _uiState.update { it.copy(form = FormFlujoState()) }
+                recargar()
+                onExito()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(form = f.copy(errores = mapOf("total" to (e.message ?: "Error al guardar")))) }
+            }
+        }
     }
 
     fun cambiarActivoRegistro(idRegistro: Long, activo: Boolean) {
         if (!puedeEditar) return
-        db.cambiarActivoRegistroFlujo(idRegistro, activo)
-        recargar()
+        viewModelScope.launch {
+            try {
+                repository.cambiarActivoFlujo(idRegistro, activo)
+                recargar()
+            } catch (_: Exception) { }
+        }
     }
 
-    fun cargarDatosDePrueba(): Boolean {
-        if (!puedeEditar) return false
-        if (db.cantidadRegistrosFlujo() > 0) return false
+    fun cargarDatosDePrueba(onResultado: (Boolean) -> Unit = {}) {
+        if (!puedeEditar) {
+            onResultado(false)
+            return
+        }
 
         val azar = Random(2026)
         val hoy = Fechas.hoy()
         val basesDiarias = listOf(190, 115, 85, 120)
-        val lista = mutableListOf<RegistroFlujo>()
+        val lista = mutableListOf<RegistroFlujoRemotoDto>()
 
-        for (dia in 0 until 60) {
+        for (dia in 0 until 30) {
             val fecha = sumarDias(hoy, -dia)
-            val tendencia = 1.0 + (60 - dia) / 600.0
+            val tendencia = 1.0 + (30 - dia) / 300.0
 
             Accesos.lista.forEachIndexed { i, acceso ->
                 val ingresos = (basesDiarias[i] * tendencia * (0.75 + azar.nextDouble() * 0.5)).toInt()
@@ -278,8 +300,7 @@ class AnaliticaViewModel(application: Application) : AndroidViewModel(applicatio
                 val mayor = transito - joven - adulto
 
                 lista.add(
-                    RegistroFlujo(
-                        id = 0,
+                    RegistroFlujoRemotoDto(
                         acceso = acceso,
                         fecha = fecha,
                         ingresos = ingresos,
@@ -293,8 +314,14 @@ class AnaliticaViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
 
-        db.insertarRegistrosFlujo(lista)
-        recargar()
-        return true
+        viewModelScope.launch {
+            try {
+                val insertados = repository.registrarLoteFlujo(lista)
+                recargar()
+                onResultado(insertados > 0)
+            } catch (_: Exception) {
+                onResultado(false)
+            }
+        }
     }
 }

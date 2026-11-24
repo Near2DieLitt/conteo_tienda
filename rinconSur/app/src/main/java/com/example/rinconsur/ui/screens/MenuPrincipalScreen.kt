@@ -7,7 +7,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,13 +14,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.rinconsur.R
+import com.example.rinconsur.data.Fechas
 import com.example.rinconsur.model.RolUsuario
 import com.example.rinconsur.ui.components.BarraNavegacionInferior
 import com.example.rinconsur.ui.components.DestinoBarra
@@ -31,6 +29,7 @@ import com.example.rinconsur.ui.components.TarjetaSinSesionActiva
 import com.example.rinconsur.ui.components.TarjetaVisitantesTienda
 import com.example.rinconsur.viewmodel.MenuPrincipalViewmodel
 import kotlinx.coroutines.delay
+
 @Composable
 fun MenuPrincipalScreen(
     correoUsuario: String = "",
@@ -55,6 +54,7 @@ fun MenuPrincipalScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     var mostrarDialogoCierre by remember { mutableStateOf(false) }
+    var mostrarSelectorSalida by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val colorTarjetaFondo = if (modoOscuro) Color(0xFF163E45) else Color(0xFFEBF3F0)
@@ -71,7 +71,12 @@ fun MenuPrincipalScreen(
         AlertDialog(
             onDismissRequest = { mostrarDialogoCierre = false },
             title = { Text("Confirmar Cierre Diario", color = if (modoOscuro) Color.White else Color.Unspecified) },
-            text = { Text("¿Deseas ejecutar el Cierre Diario? Todos los visitantes actualmente 'En_Tienda' cambiarán a 'No_Compro', dejando el contador en 0.", color = if (modoOscuro) Color(0xFFB9CACB) else Color.Unspecified) },
+            text = {
+                Text(
+                    "¿Deseas ejecutar el Cierre Diario? Todos los visitantes actualmente en tienda se marcarán como salida sin compra, dejando el contador en 0.",
+                    color = if (modoOscuro) Color(0xFFB9CACB) else Color.Unspecified
+                )
+            },
             confirmButton = {
                 Button(
                     onClick = {
@@ -85,6 +90,57 @@ fun MenuPrincipalScreen(
             },
             dismissButton = {
                 TextButton(onClick = { mostrarDialogoCierre = false }) {
+                    Text("Cancelar", color = verdeResaltado)
+                }
+            }
+        )
+    }
+
+    if (mostrarSelectorSalida) {
+        AlertDialog(
+            onDismissRequest = { mostrarSelectorSalida = false },
+            title = {
+                Text(
+                    "Registrar salida sin compra",
+                    fontWeight = FontWeight.Bold,
+                    color = if (modoOscuro) Color.White else Color.Unspecified
+                )
+            },
+            text = {
+                if (state.visitantesEnTienda.isEmpty()) {
+                    Text("No hay visitantes actualmente en la tienda.")
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Selecciona el visitante específico que se retira de la tienda:",
+                            fontSize = 13.sp,
+                            color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray
+                        )
+                        state.visitantesEnTienda.forEach { vis ->
+                            OutlinedButton(
+                                onClick = {
+                                    mostrarSelectorSalida = false
+                                    viewModel.registrarSalidaVisitanteEspecifico(vis.id)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("${vis.codigo} · ${vis.acceso}", fontWeight = FontWeight.Bold)
+                                    Text("${vis.rangoEtario} · ${vis.hora}", fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { mostrarSelectorSalida = false }) {
                     Text("Cancelar", color = verdeResaltado)
                 }
             }
@@ -119,7 +175,6 @@ fun MenuPrincipalScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -128,7 +183,7 @@ fun MenuPrincipalScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "MARTES, 15 DE SEPTIEMBRE",
+                            text = Fechas.fechaLarga(Fechas.hoy()),
                             style = MaterialTheme.typography.labelSmall,
                             color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray,
                             fontWeight = FontWeight.Bold
@@ -184,7 +239,7 @@ fun MenuPrincipalScreen(
                     ) {
                         Icon(
                             imageVector = if (modoOscuro) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                            stringResource(R.string.desc_cambiar_tema),
+                            contentDescription = "Cambiar tema",
                             tint = if (modoOscuro) Color.White else verdeResaltado
                         )
                     }
@@ -193,28 +248,6 @@ fun MenuPrincipalScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-
-            OutlinedTextField(
-                value = state.busqueda,
-                onValueChange = { viewModel.actualizarBusqueda(it) },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Buscar acceso o sesión", color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray) },
-                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray) },
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = if (modoOscuro) Color(0xFF163E45) else Color.White,
-                    unfocusedContainerColor = if (modoOscuro) Color(0xFF163E45) else Color.White,
-                    focusedTextColor = if (modoOscuro) Color.White else Color(0xFF1E2D31),
-                    unfocusedTextColor = if (modoOscuro) Color.White else Color(0xFF1E2D31),
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent
-                ),
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-
             if (state.esSesionIniciada && state.entradaActiva != null) {
                 TarjetaVisitantesTienda(
                     resumen = state.resumenVisitantes,
@@ -222,10 +255,11 @@ fun MenuPrincipalScreen(
                     colorFondoContenedor = colorTarjetaFondo,
                     verdeResaltado = verdeResaltado,
                     onRegistrarEntrada = { rango -> viewModel.registrarEntradaVisitante(rango) },
-                    onRegistrarSalida = { viewModel.registrarSalidaSinCompra() },
+                    onRegistrarSalida = { mostrarSelectorSalida = true },
                     onEjecutarCierre = { mostrarDialogoCierre = true },
                     onEscanearBoleta = onEscanearBoleta,
                     onFinalizarSesion = { viewModel.finalizarSesionEntrada() },
+                    puedeHacerConteos = state.puedeHacerConteos,
                     modoOscuro = modoOscuro
                 )
             } else {
@@ -238,7 +272,6 @@ fun MenuPrincipalScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
 
             TabRow(
                 selectedTabIndex = state.tabSeleccionada,
@@ -259,7 +292,6 @@ fun MenuPrincipalScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -305,7 +337,6 @@ fun MenuPrincipalScreen(
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-
 
             TarjetaAccesosActivos(
                 totalFlujo = state.flujoGeneralTotal,

@@ -98,7 +98,7 @@ fun AnaliticaScreen(
             onCambio = { campo, valor -> viewModel.cambiarCampo(campo, valor) },
             onCancelar = { viewModel.cerrarFormulario() },
             onGuardar = {
-                if (viewModel.guardarRegistro()) {
+                viewModel.guardarRegistro {
                     Toast.makeText(context, "Conteo registrado", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -238,12 +238,13 @@ fun AnaliticaScreen(
                                     text = { Text("Cargar datos de prueba") },
                                     onClick = {
                                         menuAbierto = false
-                                        val cargados = viewModel.cargarDatosDePrueba()
-                                        Toast.makeText(
-                                            context,
-                                            if (cargados) "Datos ficticios cargados" else "Ya existen registros",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+                                        viewModel.cargarDatosDePrueba { cargados ->
+                                            Toast.makeText(
+                                                context,
+                                                if (cargados) "Datos ficticios cargados" else "Ya existen registros",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     }
                                 )
                             }

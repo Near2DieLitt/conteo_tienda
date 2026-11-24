@@ -4,7 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 class SesionPreferencias (context: Context){
-    private val prefs: SharedPreferences = context.getSharedPreferences("sesion", Context.MODE_PRIVATE)
+
+    private val prefs: SharedPreferences by lazy { context.getSharedPreferences("sesion", Context.MODE_PRIVATE) }
 
     companion object{
         private const val CLAVE_ID_USUARIO = "id_usuario"

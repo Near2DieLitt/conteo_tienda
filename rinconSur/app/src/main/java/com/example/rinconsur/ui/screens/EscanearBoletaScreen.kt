@@ -1,6 +1,5 @@
 package com.example.rinconsur.ui.screens
 
-
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -14,15 +13,17 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,15 +39,18 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.rinconsur.R
-import com.example.rinconsur.data.UsuarioDbHelper
+import com.example.rinconsur.data.Fechas
+import com.example.rinconsur.data.RinconSurRepository
+import com.example.rinconsur.data.SesionPreferencias
+import com.example.rinconsur.data.VisitanteEnTiendaItem
 import com.example.rinconsur.model.ResultadoBoleta
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
-import com.example.rinconsur.data.SesionPreferencias
 import com.google.mlkit.vision.common.InputImage
+import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
-
+import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(ExperimentalGetImage::class)
 @Composable
@@ -56,15 +60,42 @@ fun EscanearBoletaScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
     val sesionPrefs = remember { SesionPreferencias(context) }
+    val repositorio = remember { RinconSurRepository() }
+    val scope = rememberCoroutineScope()
+
+    val entradaActiva = remember(correoUsuario) { sesionPrefs.obtenerEntradaActiva(correoUsuario) }
+    var idSesion by remember { mutableStateOf<Long?>(null) }
+    var visitantesActivos by remember { mutableStateOf<List<VisitanteEnTiendaItem>>(emptyList()) }
+    var idVisitanteSeleccionado by remember { mutableStateOf<Long?>(null) }
+
+    suspend fun recargarVisitantes(sesId: Long?) {
+        try {
+            val lista = repositorio.listarVisitantesEnTienda(Fechas.hoy(), sesId)
+            visitantesActivos = lista
+            idVisitanteSeleccionado = idVisitanteSeleccionado?.takeIf { sel -> lista.any { it.id == sel } }
+        } catch (_: Exception) { }
+    }
+
+    LaunchedEffect(correoUsuario, entradaActiva) {
+        try {
+            val idUsu = if (correoUsuario.isNotBlank()) {
+                try { repositorio.buscarUsuarioPorCorreo(correoUsuario).id } catch (_: Exception) { null }
+            } else null
+            val sesionesHoy = repositorio.listarSesiones(fecha = Fechas.hoy(), incluirInactivas = false, idUsuario = idUsu)
+            val sesId = if (!entradaActiva.isNullOrBlank()) {
+                sesionesHoy.firstOrNull { it.codigo.equals(entradaActiva, ignoreCase = true) }?.id
+            } else {
+                sesionesHoy.firstOrNull()?.id
+            }
+            idSesion = sesId
+            recargarVisitantes(sesId)
+        } catch (_: Exception) { }
+    }
 
     var hasCameraPermission by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.CAMERA
-            ) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
         )
     }
 
@@ -74,7 +105,7 @@ fun EscanearBoletaScreen(
         hasCameraPermission = granted
     }
 
-    LaunchedEffect(key1 = true) {
+    LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
             launcher.launch(Manifest.permission.CAMERA)
         }
@@ -83,13 +114,79 @@ fun EscanearBoletaScreen(
     var codigoDetectado by remember { mutableStateOf<String?>(null) }
     var resultadoBoleta by remember { mutableStateOf<ResultadoBoleta?>(null) }
     var entradaManual by remember { mutableStateOf("") }
+    var errorCamara by remember { mutableStateOf<String?>(null) }
+
+    val escaneoBloqueado = remember { AtomicBoolean(false) }
+    val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
+    val scanner = remember {
+        val options = BarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
+            .build()
+        BarcodeScanning.getClient(options)
+    }
+    var cameraProviderRef by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraProviderRef?.unbindAll()
+            scanner.close()
+            analysisExecutor.shutdown()
+        }
+    }
 
     fun procesarCodigo(codigo: String) {
-        codigoDetectado = codigo
-        val entradaActiva = sesionPrefs.obtenerEntradaActiva(correoUsuario)
-        val idUsuario = dbHelper.obtenerUsuarioPorCorreo(correoUsuario)?.id?.toLong()
-        val idSesion = entradaActiva?.let { dbHelper.obtenerIdSesionActiva(it, idUsuario) }
-        resultadoBoleta = dbHelper.procesarBoleta(codigo, accesoActivo = entradaActiva, idSesion = idSesion)
+        val folioLimpio = codigo.trim()
+        escaneoBloqueado.set(true)
+        codigoDetectado = folioLimpio
+
+        if (!folioLimpio.matches(Regex("^[0-9]{6,10}$"))) {
+            resultadoBoleta = ResultadoBoleta.FormatoInvalido
+            return
+        }
+
+        if (visitantesActivos.isEmpty()) {
+            resultadoBoleta = ResultadoBoleta.SinVisitanteActivo
+            return
+        }
+        val idVisitante = idVisitanteSeleccionado
+        if (idVisitante == null) {
+            resultadoBoleta = ResultadoBoleta.SinSeleccion
+            return
+        }
+
+        scope.launch {
+            try {
+                repositorio.vincularBoleta(idVisitante, folioLimpio)
+                if (!entradaActiva.isNullOrBlank()) {
+                    try {
+                        repositorio.registrarFlujo(
+                            acceso = entradaActiva,
+                            fecha = Fechas.hoy(),
+                            ingresos = 0,
+                            compradores = 1,
+                            joven = 0,
+                            adulto = 0,
+                            mayor = 0
+                        )
+                    } catch (_: Exception) { }
+                }
+                resultadoBoleta = ResultadoBoleta.Exito(idVisitante, folioLimpio)
+                idVisitanteSeleccionado = null
+                recargarVisitantes(idSesion)
+            } catch (e: Exception) {
+                val msg = e.message.orEmpty()
+                resultadoBoleta = when {
+                    msg.contains("YA_PROCESADA", ignoreCase = true) || msg.contains("procesada", ignoreCase = true) ->
+                        ResultadoBoleta.YaProcesada
+                    msg.contains("FORMATO_INVALIDO", ignoreCase = true) || msg.contains("dígitos", ignoreCase = true) ->
+                        ResultadoBoleta.FormatoInvalido
+                    msg.contains("SIN_VISITANTE", ignoreCase = true) || msg.contains("ya no está", ignoreCase = true) ->
+                        ResultadoBoleta.SinVisitanteActivo
+                    else -> ResultadoBoleta.ErrorServidor(msg.ifBlank { "No se pudo procesar la boleta. Revisa tu conexión." })
+                }
+                recargarVisitantes(idSesion)
+            }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
@@ -100,61 +197,60 @@ fun EscanearBoletaScreen(
                     val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
 
                     cameraProviderFuture.addListener({
-                        val cameraProvider = cameraProviderFuture.get()
-                        val preview = Preview.Builder().build().also {
-                            it.setSurfaceProvider(previewView.surfaceProvider)
-                        }
+                        try {
+                            val cameraProvider = cameraProviderFuture.get()
+                            cameraProviderRef = cameraProvider
 
-                        val options = BarcodeScannerOptions.Builder()
-                            .setBarcodeFormats(
-                                Barcode.FORMAT_CODE_128,
-                                Barcode.FORMAT_QR_CODE
-                            )
-                            .build()
-                        val scanner = BarcodeScanning.getClient(options)
-                        val analysisExecutor = Executors.newSingleThreadExecutor()
+                            val preview = Preview.Builder().build().also {
+                                it.setSurfaceProvider(previewView.surfaceProvider)
+                            }
 
-                        val imageAnalysis = ImageAnalysis.Builder()
-                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                            .build()
+                            val imageAnalysis = ImageAnalysis.Builder()
+                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                .build()
 
-                        imageAnalysis.setAnalyzer(analysisExecutor) { imageProxy ->
-                            val mediaImage = imageProxy.image
-                            if (mediaImage != null && codigoDetectado == null) {
-                                val image = InputImage.fromMediaImage(
-                                    mediaImage,
-                                    imageProxy.imageInfo.rotationDegrees
-                                )
-                                scanner.process(image)
-                                    .addOnSuccessListener { barcodes ->
-                                        for (barcode in barcodes) {
-                                            val rawValue = barcode.rawValue
-                                            if (!rawValue.isNullOrBlank()) {
-                                                procesarCodigo(rawValue)
-                                                break
+                            imageAnalysis.setAnalyzer(analysisExecutor) { imageProxy ->
+                                val mediaImage = imageProxy.image
+                                if (mediaImage != null && !escaneoBloqueado.get()) {
+                                    val image = InputImage.fromMediaImage(
+                                        mediaImage,
+                                        imageProxy.imageInfo.rotationDegrees
+                                    )
+                                    scanner.process(image)
+                                        .addOnSuccessListener { barcodes ->
+                                            val rawValue = barcodes.firstOrNull { !it.rawValue.isNullOrBlank() }?.rawValue
+                                            if (!rawValue.isNullOrBlank() && escaneoBloqueado.compareAndSet(false, true)) {
+                                                ContextCompat.getMainExecutor(ctx).execute {
+                                                    procesarCodigo(rawValue)
+                                                }
                                             }
                                         }
-                                    }
-                                    .addOnFailureListener {
-                                    }
-                                    .addOnCompleteListener {
-                                        imageProxy.close()
-                                    }
-                            } else {
-                                imageProxy.close()
+                                        .addOnCompleteListener { imageProxy.close() }
+                                } else {
+                                    imageProxy.close()
+                                }
                             }
-                        }
 
-                        try {
-                            cameraProvider.unbindAll()
-                            cameraProvider.bindToLifecycle(
-                                lifecycleOwner,
-                                CameraSelector.DEFAULT_BACK_CAMERA,
-                                preview,
-                                imageAnalysis
-                            )
+                            val selector = when {
+                                cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) -> CameraSelector.DEFAULT_BACK_CAMERA
+                                cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA) -> CameraSelector.DEFAULT_FRONT_CAMERA
+                                else -> null
+                            }
+
+                            if (selector == null) {
+                                errorCamara = "No se detectó cámara disponible. Usa el ingreso manual abajo."
+                            } else {
+                                cameraProvider.unbindAll()
+                                cameraProvider.bindToLifecycle(
+                                    lifecycleOwner,
+                                    selector,
+                                    preview,
+                                    imageAnalysis
+                                )
+                                errorCamara = null
+                            }
                         } catch (exc: Exception) {
-                            exc.printStackTrace()
+                            errorCamara = "No se pudo iniciar la cámara: ${exc.localizedMessage ?: "error desconocido"}"
                         }
                     }, ContextCompat.getMainExecutor(ctx))
 
@@ -163,34 +259,38 @@ fun EscanearBoletaScreen(
                 modifier = Modifier.fillMaxSize()
             )
 
-
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
+                modifier = Modifier.fillMaxSize().padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .width(280.dp)
-                            .height(160.dp)
-                            .border(2.dp, Color(0xFF0F5961), RoundedCornerShape(16.dp))
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Alinee la boleta dentro del recuadro",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    if (errorCamara != null) {
+                        Text(
+                            text = errorCamara!!,
+                            color = Color(0xFFFFB74D),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .width(280.dp)
+                                .height(160.dp)
+                                .border(2.dp, Color(0xFF0F5961), RoundedCornerShape(16.dp))
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Alinee la boleta dentro del recuadro",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         } else {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
+                modifier = Modifier.fillMaxSize().padding(24.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -206,7 +306,6 @@ fun EscanearBoletaScreen(
                 }
             }
         }
-
 
         Row(
             modifier = Modifier
@@ -237,7 +336,6 @@ fun EscanearBoletaScreen(
             )
         }
 
-
         Card(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -247,41 +345,62 @@ fun EscanearBoletaScreen(
             colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.95f)),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = entradaManual,
-                    onValueChange = { entradaManual = it },
-                    placeholder = { Text("Ingresar folio manualmente (6-10 dígitos)") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                IconButton(
-                    onClick = {
-                        if (entradaManual.isNotBlank()) {
-                            procesarCodigo(entradaManual)
-                            entradaManual = ""
-                        }
-                    },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(Color(0xFF0F5961), RoundedCornerShape(12.dp))
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.Send,
-                        stringResource(R.string.cd_procesar),
-                        tint = Color.White
+            Column(modifier = Modifier.padding(12.dp)) {
+                if (visitantesActivos.isNotEmpty()) {
+                    Text(
+                        "Seleccionar visitante que realiza la compra:",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF0F5961)
                     )
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        visitantesActivos.forEach { vis ->
+                            FilterChip(
+                                selected = idVisitanteSeleccionado == vis.id,
+                                onClick = { idVisitanteSeleccionado = vis.id },
+                                label = { Text("${vis.codigo} (${vis.rangoEtario})", fontSize = 10.sp) }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = entradaManual,
+                        onValueChange = { entradaManual = it },
+                        placeholder = { Text("Ingresar folio manualmente (6-10 dígitos)") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(
+                        onClick = {
+                            if (entradaManual.isNotBlank()) {
+                                procesarCodigo(entradaManual)
+                                entradaManual = ""
+                            }
+                        },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color(0xFF0F5961), RoundedCornerShape(12.dp))
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.Send,
+                            contentDescription = stringResource(R.string.cd_procesar),
+                            tint = Color.White
+                        )
+                    }
                 }
             }
         }
-
 
         resultadoBoleta?.let { res ->
             val (icono, tintColor, titulo, mensaje) = when (res) {
@@ -289,25 +408,37 @@ fun EscanearBoletaScreen(
                     Icons.Filled.CheckCircle,
                     Color(0xFF1E7550),
                     "¡Boleta Procesada!",
-                    "Boleta #${res.folio} vinculada exitosamente. El visitante cambió su estado a 'Compró'."
+                    "Boleta #${res.folio} vinculada exitosamente al visitante seleccionado."
                 )
                 is ResultadoBoleta.YaProcesada -> Quadruple(
                     Icons.Filled.Error,
                     Color.Red,
                     "Boleta Ya Registrada",
-                    "Esta boleta ya fue procesada"
+                    "Esta boleta ya fue procesada anteriormente."
                 )
                 is ResultadoBoleta.FormatoInvalido -> Quadruple(
                     Icons.Filled.Warning,
                     Color(0xFFB85D19),
                     "Estructura Inválida",
-                    "La boleta debe ser una cadena numérica con una longitud de entre 6 y 10 dígitos."
+                    "La boleta debe ser un número de entre 6 y 10 dígitos."
+                )
+                is ResultadoBoleta.SinSeleccion -> Quadruple(
+                    Icons.Filled.Warning,
+                    Color(0xFFB85D19),
+                    "Selecciona un visitante",
+                    "Elige primero qué visitante realizó la compra y vuelve a escanear."
+                )
+                is ResultadoBoleta.ErrorServidor -> Quadruple(
+                    Icons.Filled.Error,
+                    Color.Red,
+                    "No se pudo procesar",
+                    res.mensaje
                 )
                 is ResultadoBoleta.SinVisitanteActivo -> Quadruple(
                     Icons.Filled.Warning,
                     Color(0xFFB85D19),
                     "Sin Visitantes en Tienda",
-                    "No hay visitantes activos en la tienda con estado 'En_Tienda' para vincular con la compra."
+                    "No hay visitantes actualmente dentro de la tienda para vincular con la compra."
                 )
             }
 
@@ -321,9 +452,7 @@ fun EscanearBoletaScreen(
                         modifier = Modifier.size(48.dp)
                     )
                 },
-                title = {
-                    Text(text = titulo, fontWeight = FontWeight.Bold)
-                },
+                title = { Text(text = titulo, fontWeight = FontWeight.Bold) },
                 text = {
                     Column {
                         Text(text = mensaje, fontSize = 15.sp)
@@ -343,6 +472,7 @@ fun EscanearBoletaScreen(
                         onClick = {
                             codigoDetectado = null
                             resultadoBoleta = null
+                            escaneoBloqueado.set(false)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F5961))
                     ) {
