@@ -3,7 +3,6 @@ package com.example.rinconsur.data
 import com.example.rinconsur.data.remote.*
 import java.io.IOException
 
-// APIs falsas (como FakeUsuarioApi del profe): simulan los microservicios sin red ni servidor
 class FakeUsuarioRemotoApi : UsuarioRemotoApi {
     var sinConexion = false
     val usuarios = mutableListOf(

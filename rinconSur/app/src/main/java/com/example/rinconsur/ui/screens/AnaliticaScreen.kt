@@ -1,6 +1,5 @@
 package com.example.rinconsur.ui.screens
 
-
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -133,7 +132,6 @@ fun AnaliticaScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Encabezado
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -306,22 +304,6 @@ fun AnaliticaScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Estadistica(
-                        icono = Icons.Outlined.TrendingUp,
-                        valor = state.crecimiento?.let { String.format(localeCl, "%+.0f%%", it) } ?: "—",
-                        etiqueta = "Crecimiento",
-                        modoOscuro = modoOscuro,
-                        modifier = Modifier.weight(1f)
-                    )
-                    DivisorVertical(modoOscuro = modoOscuro)
-                    Estadistica(
-                        icono = Icons.Outlined.Schedule,
-                        valor = state.duracionPromedioMin?.let { "$it min" } ?: "—",
-                        etiqueta = "Promedio",
-                        modoOscuro = modoOscuro,
-                        modifier = Modifier.weight(1f)
-                    )
-                    DivisorVertical(modoOscuro = modoOscuro)
-                    Estadistica(
                         icono = Icons.Outlined.CalendarToday,
                         valor = state.cantidadSesiones.toString(),
                         etiqueta = "Sesiones",
@@ -426,48 +408,10 @@ fun AnaliticaScreen(
                 }
             }
 
-            if (state.registros.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = if (modoOscuro) Color(0xFF163E45) else Superficie),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Últimos registros",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (modoOscuro) Color.White else Petroleo800
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        state.registros.forEachIndexed { i, registro ->
-                            if (i > 0) {
-                                HorizontalDivider(color = if (modoOscuro) Color(0xFF254A50) else FondoAplicacion)
-                            }
-                            FilaRegistro(
-                                registro = registro,
-                                puedeEditar = puedeEditar,
-                                modoOscuro = modoOscuro,
-                                onCambiarActivo = { activo ->
-                                    viewModel.cambiarActivoRegistro(registro.id, activo)
-                                    Toast.makeText(
-                                        context,
-                                        if (activo) "Registro habilitado" else "Registro deshabilitado",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
-
 
 @Composable
 private fun SelectorCampo(

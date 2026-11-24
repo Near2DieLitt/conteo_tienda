@@ -238,6 +238,15 @@ class MenuPrincipalViewmodel(application: Application) : AndroidViewModel(applic
         }
     }
 
+    fun registrarSalidaAutomatica() {
+        val visitante = _uiState.value.visitantesEnTienda.firstOrNull()
+        if (visitante == null) {
+            _uiState.update { it.copy(mensajeInformativo = "No hay visitantes actualmente en la tienda.") }
+            return
+        }
+        registrarSalidaVisitanteEspecifico(visitante.id)
+    }
+
     fun registrarSalidaVisitanteEspecifico(idVisitante: Long) {
         if (!_uiState.value.puedeHacerConteos) {
             _uiState.update { it.copy(mensajeInformativo = "Solo el perfil Observador puede realizar conteos de visitantes.") }

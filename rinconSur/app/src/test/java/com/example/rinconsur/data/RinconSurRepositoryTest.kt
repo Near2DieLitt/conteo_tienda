@@ -35,7 +35,6 @@ class RinconSurRepositoryTest {
         assertTrue(msg.contains("renata@gmail.com"))
         assertEquals(3, repo.listarUsuarios().size)
 
-        // La clave temporal se envia por correo: el admin no la recibe
         val resp = repo.generarClaveTemporal(4L, 1L)
         assertFalse(resp.containsKey("clave"))
         assertTrue(resp["mensaje"].toString().contains("correo"))

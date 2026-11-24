@@ -54,7 +54,6 @@ fun MenuPrincipalScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     var mostrarDialogoCierre by remember { mutableStateOf(false) }
-    var mostrarSelectorSalida by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val colorTarjetaFondo = if (modoOscuro) Color(0xFF163E45) else Color(0xFFEBF3F0)
@@ -90,57 +89,6 @@ fun MenuPrincipalScreen(
             },
             dismissButton = {
                 TextButton(onClick = { mostrarDialogoCierre = false }) {
-                    Text("Cancelar", color = verdeResaltado)
-                }
-            }
-        )
-    }
-
-    if (mostrarSelectorSalida) {
-        AlertDialog(
-            onDismissRequest = { mostrarSelectorSalida = false },
-            title = {
-                Text(
-                    "Registrar salida sin compra",
-                    fontWeight = FontWeight.Bold,
-                    color = if (modoOscuro) Color.White else Color.Unspecified
-                )
-            },
-            text = {
-                if (state.visitantesEnTienda.isEmpty()) {
-                    Text("No hay visitantes actualmente en la tienda.")
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "Selecciona el visitante específico que se retira de la tienda:",
-                            fontSize = 13.sp,
-                            color = if (modoOscuro) Color(0xFFB9CACB) else Color.Gray
-                        )
-                        state.visitantesEnTienda.forEach { vis ->
-                            OutlinedButton(
-                                onClick = {
-                                    mostrarSelectorSalida = false
-                                    viewModel.registrarSalidaVisitanteEspecifico(vis.id)
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text("${vis.codigo} · ${vis.acceso}", fontWeight = FontWeight.Bold)
-                                    Text("${vis.rangoEtario} · ${vis.hora}", fontSize = 12.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { mostrarSelectorSalida = false }) {
                     Text("Cancelar", color = verdeResaltado)
                 }
             }
@@ -255,7 +203,7 @@ fun MenuPrincipalScreen(
                     colorFondoContenedor = colorTarjetaFondo,
                     verdeResaltado = verdeResaltado,
                     onRegistrarEntrada = { rango -> viewModel.registrarEntradaVisitante(rango) },
-                    onRegistrarSalida = { mostrarSelectorSalida = true },
+                    onRegistrarSalida = { viewModel.registrarSalidaAutomatica() },
                     onEjecutarCierre = { mostrarDialogoCierre = true },
                     onEscanearBoleta = onEscanearBoleta,
                     onFinalizarSesion = { viewModel.finalizarSesionEntrada() },
