@@ -86,13 +86,46 @@ app/src/main/java/com/example/rinconsur/
 Al actualizar la versión de la base de datos, esta se recrea y se pierden los datos de prueba. Para empezar de cero, desinstala la app del dispositivo.
 
 ## Usuarios de prueba
+Usuario
+Correo
+Contraseña
+Daniela (admin)
+rvaldes.4419@gmail.com
+Daniela123!
+Renata (Supervisora Caja)
+revaldes007@gmail.com
+Renata123!
+Matias (Observador)
+mati.acevedo.05@gmail.com
+Matias123!
+Nicole (Supervisora Piso)
+elshield.ever.06@gmail.com
+Nicole123!
+Jose Bustamante(observador)
+babubub4a@gmail.com
+Jose123!
 
-| Perfil | Correo | Contraseña |
-| --- | --- | --- |
-| Administrador | daniela@rinconsur.cl | Daniela123 |
-| Supervisor | nicole@rinconsur.cl | Nicole123 |
-| Supervisor | renata@rinconsur.cl | Renata123 |
-| Observador | matias@rinconsur.cl | Matias123 |
+
+Eureka
+http://localhost:8761
+
+
+Ms
+Link
+Roles
+http://localhost:8081/swagger-ui.html
+Usuarios
+http://localhost:8082/swagger-ui.html
+Notificaciones
+http://localhost:8083/swagger-ui.html
+Sesiones
+http://localhost:8084/swagger-ui.html
+Visitantes
+http://localhost:8085/swagger-ui.html
+Analítica
+http://localhost:8086/swagger-ui.html
+
+
 
 ### Para probar el escaneo de boletas
 
