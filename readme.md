@@ -86,45 +86,33 @@ app/src/main/java/com/example/rinconsur/
 Al actualizar la versión de la base de datos, esta se recrea y se pierden los datos de prueba. Para empezar de cero, desinstala la app del dispositivo.
 
 ## Usuarios de prueba
-Usuario
-Correo
-Contraseña
-Daniela (admin)
-rvaldes.4419@gmail.com
-Daniela123!
-Renata (Supervisora Caja)
-revaldes007@gmail.com
-Renata123!
-Matias (Observador)
-mati.acevedo.05@gmail.com
-Matias123!
-Nicole (Supervisora Piso)
-elshield.ever.06@gmail.com
-Nicole123!
-Jose Bustamante(observador)
-babubub4a@gmail.com
-Jose123!
+Para ingresar al sistema en el entorno de desarrollo/pruebas, utiliza cualquiera de las siguientes credenciales según el rol que desees evaluar:
+
+| Usuario | Rol | Correo electrónico | Contraseña |
+| :--- | :--- | :--- | :--- |
+| **Daniela** | Administrador | `rvaldes.4419@gmail.com` | `Daniela123!` |
+| **Renata** | Supervisora Caja | `revaldes007@gmail.com` | `Renata123!` |
+| **Nicole** | Supervisora Piso | `elshield.ever.06@gmail.com` | `Nicole123!` |
+| **Matías** | Observador | `mati.acevedo.05@gmail.com` | `Matias123!` |
+| **José Bustamante** | Observador | `babubub4a@gmail.com` | `Jose123!` |
 
 
-Eureka
-http://localhost:8761
+
+### Service Discovery
+* **Eureka Server:** [http://localhost:8761](http://localhost:8761)
 
 
-Ms
-Link
-Roles
-http://localhost:8081/swagger-ui.html
-Usuarios
-http://localhost:8082/swagger-ui.html
-Notificaciones
-http://localhost:8083/swagger-ui.html
-Sesiones
-http://localhost:8084/swagger-ui.html
-Visitantes
-http://localhost:8085/swagger-ui.html
-Analítica
-http://localhost:8086/swagger-ui.html
+### Documentación de Microservicios (Swagger UI)
+| Microservicio | Puerto | Documentación |
+| :--- | :---: | :--- |
+| **Roles** | `8081` | [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html) |
+| **Usuarios** | `8082` | [http://localhost:8082/swagger-ui.html](http://localhost:8082/swagger-ui.html) |
+| **Notificaciones** | `8083` | [http://localhost:8083/swagger-ui.html](http://localhost:8083/swagger-ui.html) |
+| **Sesiones** | `8084` | [http://localhost:8084/swagger-ui.html](http://localhost:8084/swagger-ui.html) |
+| **Visitantes** | `8085` | [http://localhost:8085/swagger-ui.html](http://localhost:8085/swagger-ui.html) |
+| **Analítica** | `8086` | [http://localhost:8086/swagger-ui.html](http://localhost:8086/swagger-ui.html) |
 
+---
 
 
 ### Para probar el escaneo de boletas
